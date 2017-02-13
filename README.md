@@ -1,6 +1,6 @@
 # Deep Learning Papers
 - Categorized list of Deep Learning papers I read among which gave me **meaningful insights**.
-- Papers are **categorized by their related models and intuitions** behind them, **irrelvant of their applied tasks**.
+- Papers are **categorized by their related models and intuitions** behind them, **irrelevant of their applied tasks**.
 - Papers in a same category are **sorted by their chronological order**.
 
 
