@@ -1,7 +1,7 @@
-# dl-papers
-- Categorized Deep Learning papers I read among which gave me meaningful insights.
-- Papers are categorized by their related models and their intuitions behind them, irrelvant of their applied tasks.
-- Papers in a same category are sorted by their chronological order.
+# Deep Learning Papers
+- Categorized Deep Learning papers I read among which gave me **meaningful insights**.
+- Papers are **categorized by their related models and their intuitions** behind them, irrelvant of their applied tasks.
+- Papers in a same category are **sorted by their chronological order**.
 
 
 ## CNN
