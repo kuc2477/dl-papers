@@ -15,7 +15,7 @@
 
 
 ## Memory Networks
-- *Neural Turing Machines (A.Graves, G. Wayne, I. Danihelka)* [[arxiv, 14.10]](http://arxiv.org/abs/1410.5401)
+- *Neural Turing Machines (A. Graves, G. Wayne, I. Danihelka)* [[arxiv, 14.10]](http://arxiv.org/abs/1410.5401)
 
 
 ## Unsupervised Models
