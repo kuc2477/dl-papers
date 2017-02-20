@@ -26,6 +26,7 @@
 
 ### GAN
 - *Generative Adversarial Networks (I. Goodfellow, J.Pouget-Abadie, M.Mirza et al.)* [[arxiv, 14.06]](http://arxiv.org/abs/1406.2661)
+- *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks (A. Radford, L. Metz, S.Chintala)* [[arxiv, 15.11]](http://arxiv.org/abs/1511.06434)
 
 ### VAE
 - *Auto-Encoding Variational Bayes (Kingma, Diederik P Welling, Max)* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114)
