@@ -9,45 +9,94 @@ import utils
 
 
 class GAN(metaclass=abc.ABCMeta):
-    # TODO NOT IMPLEMENTED YET
-    pass
+    def __init__(self, z_size, image_size):
+        # model-wise initializer 
+        self._initialzier = tf.truncated_normal_initializer(stddev=0.002)
+
+        # basic hyperparameters and placeholders
+        self._z_size = z_size
+        self._z_in = z_in = tf.placeholder(
+            shape=[None, z_size], dtype=tf.float32
+        )
+        self._image_size = image_size
+        self._image_in = image_in = tf.placeholder(
+            shape=[None, image_size, image_size, 1], dtype=tf.float32
+        )
+    
+    @property
+    def z_size(self):
+        return self._z_size
+
+    @property
+    def z_in(self):
+        return self._z_in
+
+    @property
+    def image_size(self):
+        return self._image_size
+
+    @property
+    def image_in(self):
+        return self._image_in
+
+    @abc.abstractproperty
+    def G(self):
+        raise NotImplementedError
+
+    @abc.abstractproperty
+    def D_x(self):
+        raise NotImplementedError
+
+    @abc.abstractproperty
+    def D_g(self):
+        raise NotImplementedError
+
+    @abc.abstractproperty
+    def d_loss(self):
+        raise NotImplementedError
+
+    @abc.abstractproperty
+    def g_loss(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def generator(self, z):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def discriminator(self, bottom):
+        raise NotImplementedError
 
 
 class DCGAN(GAN):
-    def __init__(self, z_size, image_size, learning_rate=0.0002, beta1=0.5,
-                 iterations=5000, batch_size=128, generator_update_ratio=2,
-                 log_for_every=10, save_for_every=10,
-                 sample_dir='./figures', model_dir='./models'):
-        # training related variables and hyperparameters
-        self._initialzier = tf.truncated_normal_initializer(stddev=0.02)
-        self._iterations = iterations
-        self._batch_size = batch_size
-        self._generator_update_ratio = generator_update_ratio
-        self._log_for_every = log_for_every
-        self._save_for_every = save_for_every
-        self._sample_dir = sample_dir
-        self._model_dir = model_dir
-
-        # model hyperparameters
-        self._z_size = z_size
-        self._image_size = image_size
-        self._learning_rate = learning_rate
-        self._beta1 = beta1
-
-        # placeholders
-        self.z_in = z_in = tf.placeholder(
-            shape=[None, z_size], dtype=tf.float32
-        )
-        self.image_in = image_in = tf.placeholder(
-            shape=[None, image_size, image_size, 1], dtype=tf.float32
-        )
-
+    def __init__(self, z_size, image_size):
+        super().__init__(z_size=z_size, image_size=image_size)
         # build graph using a generator and a discriminator.
-        self.G = G = self.generator(z_in)
-        self.D_x = D_x = self.discriminator(image_in)
-        self.D_g = D_g = self.discriminator(G, reuse=True)
-        self.d_loss = -tf.reduce_mean(tf.log(D_x) + tf.log(1. - D_g))
-        self.g_loss = -tf.reduce_mean(tf.log(D_g))
+        self._G = self.generator(self.z_in)
+        self._D_x = self.discriminator(self.image_in)
+        self._D_g = self.discriminator(self.G, reuse=True)
+        self._d_loss = -tf.reduce_mean(tf.log(self.D_x) + tf.log(1. - self.D_g))
+        self._g_loss = -tf.reduce_mean(tf.log(self.D_g))
+
+    @property
+    def G(self):
+        return self._G
+
+    @property
+    def D_x(self):
+        return self._D_x
+
+    @property
+    def D_g(self):
+        return self._D_g
+
+    @property
+    def d_loss(self):
+        return self._d_loss
+
+    @property
+    def g_loss(self):
+        return self._g_loss
 
     def generator(self, z):
         z_projected = slim.fully_connected(
@@ -133,6 +182,7 @@ class DCGAN(GAN):
 
         return d_out
 
+    # TODO: MOVE THE TRAINING LOGIC TO train.py
     def train(self, config, sess=None):
         D_trainer = tf.train.AdamOptimizer(
             learning_rate=config.learning_rate,
@@ -143,6 +193,7 @@ class DCGAN(GAN):
             beta1=config.beta1,
         )
 
+        trainables = tf.trainable_variables()
         d_grads = D_trainer.compute_gradients(self.d_loss, var_list=trainables[9:])
         g_grads = G_trainer.compute_gradients(self.g_loss, var_list=trainables[:9])
         update_D = D_trainer.apply_gradients(d_grads)
