@@ -1,3 +1,4 @@
+import abc
 import os.path
 import numpy as np
 import tensorflow as tf
@@ -7,7 +8,12 @@ from activations import lrelu
 import utils
 
 
-class DCGAN(object):
+class GAN(metaclass=abc.ABCMeta):
+    # TODO NOT IMPLEMENTED YET
+    pass
+
+
+class DCGAN(GAN):
     def __init__(self, z_size, image_size, learning_rate=0.0002, beta1=0.5,
                  iterations=5000, batch_size=128, generator_update_ratio=2,
                  log_for_every=10, save_for_every=10,
@@ -40,8 +46,8 @@ class DCGAN(object):
         self.G = G = self.generator(z_in)
         self.D_x = D_x = self.discriminator(image_in)
         self.D_g = D_g = self.discriminator(G, reuse=True)
-        self.update_D, self.update_G, self.d_loss, self.g_loss = \
-            self.build(G, D_x, D_g)
+        self.d_loss = -tf.reduce_mean(tf.log(D_x) + tf.log(1. - D_g))
+        self.g_loss = -tf.reduce_mean(tf.log(D_g))
 
     def generator(self, z):
         z_projected = slim.fully_connected(
@@ -127,28 +133,21 @@ class DCGAN(object):
 
         return d_out
 
-    def build(self, G, D_x, D_g):
-        d_loss = -tf.reduce_mean(tf.log(D_x) + tf.log(1. - D_g))
-        g_loss = -tf.reduce_mean(tf.log(D_g))
-
+    def train(self, config, sess=None):
         D_trainer = tf.train.AdamOptimizer(
-            learning_rate=self._learning_rate,
-            beta1=self._beta1
+            learning_rate=config.learning_rate,
+            beta1=config.beta1
         )
         G_trainer = tf.train.AdamOptimizer(
-            learning_rate=self._learning_rate,
-            beta1=self._beta1,
+            learning_rate=config.learning_rate,
+            beta1=config.beta1,
         )
 
-        trainables = tf.trainable_variables()
-        d_grads = D_trainer.compute_gradients(d_loss, var_list=trainables[9:])
-        g_grads = G_trainer.compute_gradients(g_loss, var_list=trainables[:9])
+        d_grads = D_trainer.compute_gradients(self.d_loss, var_list=trainables[9:])
+        g_grads = G_trainer.compute_gradients(self.g_loss, var_list=trainables[:9])
         update_D = D_trainer.apply_gradients(d_grads)
         update_G = G_trainer.apply_gradients(g_grads)
-        return update_D, update_G, d_loss, g_loss
 
-
-    def train(self, config, sess=None):
         mnist = input_data.read_data_sets('MNIST/', one_hot=False)
         saver = tf.train.Saver()
         with sess or tf.Session() as sess:
@@ -172,7 +171,7 @@ class DCGAN(object):
 
                 # run discriminator trainer
                 _, d_loss = sess.run(
-                    [self.update_D, self.d_loss], 
+                    [update_D, self.d_loss], 
                     feed_dict={
                         self.z_in: zs, 
                         self.image_in: xs
@@ -181,7 +180,7 @@ class DCGAN(object):
                 # run generator trainer
                 for _ in range(config.generator_update_ratio):
                     _, g_loss = sess.run(
-                        [self.update_G, self.g_loss], 
+                        [update_G, self.g_loss], 
                         feed_dict={self.z_in: zs}
                     )
 
@@ -220,3 +219,8 @@ class DCGAN(object):
                     path = '{}/model-{}.cptk'.format(config.model_dir, i)
                     saver.save(sess, path)
                     print('saved model to {}'.format(path))
+
+
+class InfoGAN(GAN):
+    # TODO NOT IMPLEMENTED YET
+    pass
