@@ -90,3 +90,5 @@ ENV/
 
 # vim
 *.sw*
+
+checkpoints
