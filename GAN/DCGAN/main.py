@@ -33,6 +33,7 @@ flags.DEFINE_integer(
     'generator_update_ratio', 2,
     'number of updates for generator parameters per discriminator\'s updates'
 )
+flags.DEFINE_bool('test', True, 'flag defining whether it is in test mode')
 flags.DEFINE_string('sample_dir', 'figures', 'directory of generated figures')
 flags.DEFINE_string('model_dir', 'checkpoints', 'directory of trained models')
 FLAGS = flags.FLAGS
@@ -49,7 +50,11 @@ def main(_):
         g_filter_size=FLAGS.g_filter_size,
         d_filter_size=FLAGS.d_filter_size,
     )
-    train(dcgan, FLAGS)
+    if FLAGS.test:
+        # TODO: NOT IMPLEMENTED YET
+        print('TEST MODE NOT IMPLEMENTED YET')
+    else:
+        train(dcgan, FLAGS)
 
 
 if __name__ == '__main__':
