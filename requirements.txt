@@ -1,4 +1,10 @@
+# ml
 tensorflow-gpu
 scipy
 numpy
 pillow
+
+# utils
+colorama
+requests
+tqdm

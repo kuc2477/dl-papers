@@ -1,6 +1,4 @@
-import os.path
 import pprint
-import numpy as np
 import tensorflow as tf
 from model import DCGAN
 from train import train
@@ -20,7 +18,8 @@ flags.DEFINE_integer(
 )
 flags.DEFINE_integer('g_filter_size', 5, 'generator\'s filter size')
 flags.DEFINE_integer('d_filter_size', 4, 'discriminator\'s filter size')
-flags.DEFINE_float('learning_rate', 0.00002, 'learning rate for Adam [0.00002]')
+flags.DEFINE_float('learning_rate', 0.00002,
+                   'learning rate for Adam [0.00002]')
 flags.DEFINE_float('beta1', 0.5, 'momentum term of Adam [0.5]')
 flags.DEFINE_integer('iterations', 5000, 'training iteration number')
 flags.DEFINE_integer('batch_size', 128, 'training batch size')
