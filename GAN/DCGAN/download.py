@@ -160,6 +160,6 @@ if __name__ == "__main__":
         maybe_download_lsun(
             './data/lsun', 'val', category='classroom', set_name='val'
         )
-    elif 'mnist' in args.datasets:
+    if 'mnist' in args.datasets:
         maybe_download_mnist('./data/mnist', 'train', set_name='train')
         maybe_download_mnist('./data/mnist', 'val', set_name='val')
