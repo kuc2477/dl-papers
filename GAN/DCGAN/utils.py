@@ -2,10 +2,12 @@
 # https://github.com/carpedm20/DCGAN-tensorflow
 import os
 import os.path
+import tempfile
 import numpy as np
 import scipy.misc
 import scipy
 import lmdb
+from PIL import Image
 
 
 # ===========
@@ -79,7 +81,7 @@ def merge(images, size):
 # Dataset Utils
 # =============
 
-def export_mdb_images(db_path, out_dir, flat=False, limit=-1):
+def export_mdb_images(db_path, out_dir, flat=True, limit=-1, size=256):
     env = lmdb.open(
         db_path, map_size=1099511627776,
         max_readers=100, readonly=True
@@ -89,15 +91,22 @@ def export_mdb_images(db_path, out_dir, flat=False, limit=-1):
         cursor = txn.cursor()
         for key, val in cursor:
             key = str(key, 'utf-8')
+            # decide image out directory
             if not flat:
                 image_out_dir = os.path.join(out_dir, '/'.join(key[:6]))
             else:
                 image_out_dir = out_dir
+
+            # create the directory if an image out directory doesn't exist
             if not os.path.exists(image_out_dir):
                 os.makedirs(image_out_dir)
-            image_out_path = os.path.join(image_out_dir, key + '.webp')
-            with open(image_out_path, 'wb') as fp:
-                fp.write(val)
+
+            with tempfile.NamedTemporaryFile('wb') as temp:
+                temp.write(val)
+                temp.flush()
+                temp.seek(0)
+                image_out_path = os.path.join(image_out_dir, key + '.jpg')
+                Image.open(temp.name).resize((size, size)).save(image_out_path)
             count += 1
             if count == limit:
                 break
