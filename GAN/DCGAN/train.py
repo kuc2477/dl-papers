@@ -16,8 +16,7 @@ def train(model, config, sess=None):
         beta1=config.beta1,
     )
 
-    # get trainables and parameter update tasks
-    trainables = tf.trainable_variables()
+    # get parameter update tasks
     d_grads = D_trainer.compute_gradients(model.d_loss, var_list=model.d_vars)
     g_grads = G_trainer.compute_gradients(model.g_loss, var_list=model.g_vars)
     update_D = D_trainer.apply_gradients(d_grads)

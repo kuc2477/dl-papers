@@ -8,3 +8,4 @@ pillow
 colorama
 requests
 tqdm
+lmdb
