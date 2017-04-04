@@ -5,7 +5,6 @@ import os.path
 import argparse
 import subprocess
 import zipfile
-import uuid
 from tqdm import tqdm
 import requests
 from colorama import Fore
@@ -38,21 +37,22 @@ def _log(start, end, start_color='yellow', end_color='cyan'):
     print(_c('>> ' + end, end_color) + '\n')
 
 
-def _download(url):
-    local_filename = url.split('/')[-1]
+def _download(url, filename=None):
+    local_filename = filename or url.split('/')[-1]
+    temp_filename = '.{}'.format(local_filename)
     response = requests.get(url, stream=True)
     total_size = int(response.headers.get('content-length', 0))
 
-    with open(local_filename, 'wb') as f:
+    with open(temp_filename, 'wb') as f:
         for chunk in tqdm(
                 response.iter_content(1024 * 32),
-                total=total_size // (1024 * 32), 
+                total=total_size // (1024 * 32),
                 unit='KiB', unit_scale=True,
         ):
             if chunk:
                 f.write(chunk)
     response.close()
-
+    os.rename(temp_filename, local_filename)
     return local_filename
 
 
@@ -65,7 +65,7 @@ def _extract_zip(zipfile_path, extraction_path='.'):
 
 def _extract_gz(gzfile_path, extraction_path='.'):
     cmd = ['gzip', '-d', gzfile_path]
-    res = subprocess.call(cmd)
+    subprocess.call(cmd)
     return '.'.join(gzfile_path.split('.')[:-1])
 
 
