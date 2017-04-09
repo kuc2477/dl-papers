@@ -8,6 +8,7 @@ import zipfile
 from tqdm import tqdm
 import requests
 from colorama import Fore
+from data import export_mdb_images
 
 
 # =============
@@ -160,6 +161,11 @@ if __name__ == "__main__":
         maybe_download_lsun(
             './data/lsun', 'val', category='classroom', set_name='val'
         )
+        with _log(
+                'export lsun images from mdb file',
+                'exported lsun images from mdb file'):
+            export_mdb_images('./data/lsun/val')
+            export_mdb_images('./data/lsun/train')
     if 'mnist' in args.datasets:
         maybe_download_mnist('./data/mnist', 'train', set_name='train')
         maybe_download_mnist('./data/mnist', 'val', set_name='val')

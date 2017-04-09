@@ -21,6 +21,7 @@ flags.DEFINE_integer('d_filter_size', 4, 'discriminator\'s filter size')
 flags.DEFINE_float('learning_rate', 0.00002,
                    'learning rate for Adam [0.00002]')
 flags.DEFINE_float('beta1', 0.5, 'momentum term of Adam [0.5]')
+flags.DEFINE_string('dataset', 'mnist', 'dataset to use [mnist, lsun]')
 flags.DEFINE_integer('iterations', 5000, 'training iteration number')
 flags.DEFINE_integer('batch_size', 128, 'training batch size')
 flags.DEFINE_integer('sample_size', 36, 'generator sample size')

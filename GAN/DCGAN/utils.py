@@ -1,20 +1,11 @@
 # Below functions are taken from carpdem20's implementation
 # https://github.com/carpedm20/DCGAN-tensorflow
-import os
-import os.path
-import tempfile
 import numpy as np
 import scipy.misc
 import scipy
-import lmdb
-from PIL import Image
 
 
-# ===========
-# Image Utils
-# ===========
-
-def get_image(image_path, input_height, input_width,
+def get_image(image_path, input_height=None, input_width=None,
               resize_height=64, resize_width=64,
               is_crop=True, is_grayscale=False):
     image = imread(image_path, is_grayscale)
@@ -28,8 +19,10 @@ def imread(path, is_grayscale=False):
     return scipy.misc.imread(path, flatten=is_grayscale).astype(np.float)
 
 
-def transform(image, input_height, input_width,
+def transform(image, input_height=None, input_width=None,
               resize_height=64, resize_width=64, crop=True):
+    input_height = input_height or image.shape[0]
+    input_width = input_width or image.shape[1]
     if crop:
         cropped_image = center_crop(
             image, input_height, input_width,
@@ -75,40 +68,3 @@ def merge(images, size):
         img[j*h:j*h+h, i*w:i*w+w] = image
 
     return img
-
-
-# =============
-# Dataset Utils
-# =============
-
-def export_mdb_images(db_path, out_dir, flat=True, limit=-1, size=256):
-    env = lmdb.open(
-        db_path, map_size=1099511627776,
-        max_readers=100, readonly=True
-    )
-    count = 0
-    with env.begin(write=False) as txn:
-        cursor = txn.cursor()
-        for key, val in cursor:
-            key = str(key, 'utf-8')
-            # decide image out directory
-            if not flat:
-                image_out_dir = os.path.join(out_dir, '/'.join(key[:6]))
-            else:
-                image_out_dir = out_dir
-
-            # create the directory if an image out directory doesn't exist
-            if not os.path.exists(image_out_dir):
-                os.makedirs(image_out_dir)
-
-            with tempfile.NamedTemporaryFile('wb') as temp:
-                temp.write(val)
-                temp.flush()
-                temp.seek(0)
-                image_out_path = os.path.join(image_out_dir, key + '.jpg')
-                Image.open(temp.name).resize((size, size)).save(image_out_path)
-            count += 1
-            if count == limit:
-                break
-            if count % 1000 == 0:
-                print('Finished', count, 'images')
