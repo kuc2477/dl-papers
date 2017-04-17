@@ -1,5 +1,6 @@
 import pprint
 import tensorflow as tf
+from data import DATASETS
 from model import DCGAN
 from train import train
 
@@ -21,11 +22,13 @@ flags.DEFINE_integer('d_filter_size', 4, 'discriminator\'s filter size')
 flags.DEFINE_float('learning_rate', 0.00002,
                    'learning rate for Adam [0.00002]')
 flags.DEFINE_float('beta1', 0.5, 'momentum term of Adam [0.5]')
-flags.DEFINE_string('dataset', 'mnist', 'dataset to use [mnist, lsun]')
+flags.DEFINE_string('dataset', 'mnist', 'dataset to use {}'.format(
+    DATASETS.keys()
+))
 flags.DEFINE_integer('iterations', 5000, 'training iteration number')
-flags.DEFINE_integer('batch_size', 128, 'training batch size')
+flags.DEFINE_integer('batch_size', 64, 'training batch size')
 flags.DEFINE_integer('sample_size', 36, 'generator sample size')
-flags.DEFINE_integer('log_for_every', 10, 'number of batches per logging')
+flags.DEFINE_integer('log_for_every', 100, 'number of batches per logging')
 flags.DEFINE_integer(
     'save_for_every', 1000, 'number of batches per saving the model'
 )
@@ -33,14 +36,28 @@ flags.DEFINE_integer(
     'generator_update_ratio', 2,
     'number of updates for generator parameters per discriminator\'s updates'
 )
-flags.DEFINE_bool('test', True, 'flag defining whether it is in test mode')
+flags.DEFINE_bool('test', False, 'flag defining whether it is in test mode')
 flags.DEFINE_string('sample_dir', 'figures', 'directory of generated figures')
 flags.DEFINE_string('model_dir', 'checkpoints', 'directory of trained models')
 FLAGS = flags.FLAGS
 
 
+def _patch_flags_with_dataset(flags_):
+    flags_.image_size = DATASETS[flags_.dataset].image_size or \
+        flags_.image_size
+    flags_.channel_size = DATASETS[flags_.dataset].channel_size or \
+        flags_.channel_size
+    return flags_
+
+
 def main(_):
+    global FLAGS
+
+    # patch and display flags with dataset's width and height
+    FLAGS = _patch_flags_with_dataset(FLAGS)
     pprint.PrettyPrinter().pprint(FLAGS.__flags)
+
+    # compile the model
     dcgan = DCGAN(
         z_size=FLAGS.z_size,
         image_size=FLAGS.image_size,
@@ -50,6 +67,8 @@ def main(_):
         g_filter_size=FLAGS.g_filter_size,
         d_filter_size=FLAGS.d_filter_size,
     )
+
+    # test / train the model
     if FLAGS.test:
         # TODO: NOT IMPLEMENTED YET
         print('TEST MODE NOT IMPLEMENTED YET')

@@ -1,8 +1,8 @@
 import os.path
 import numpy as np
 import tensorflow as tf
-from tensorflow.examples.tutorials.mnist import input_data
 import utils
+from data import DATASETS
 
 
 def train(model, config, sess=None):
@@ -23,7 +23,7 @@ def train(model, config, sess=None):
     update_G = G_trainer.apply_gradients(g_grads)
 
     # prepare training data and saver
-    mnist = input_data.read_data_sets('MNIST/', one_hot=False)
+    dataset = DATASETS[config.dataset](config.batch_size)
     saver = tf.train.Saver()
 
     with sess or tf.Session() as sess:
@@ -38,12 +38,16 @@ def train(model, config, sess=None):
             zs = np.random.uniform(
                 -1., 1., size=[config.batch_size, config.z_size]
             ).astype(np.float32)
-            xs, _ = mnist.train.next_batch(config.batch_size)
-            xs = (np.reshape(xs, [config.batch_size, 28, 28, 1]) - 0.5) * 2.
-            xs = np.lib.pad(
-                xs, ((0, 0), (2, 2), (2, 2), (0, 0)), 'constant',
-                constant_values=(-1, -1)
-            )
+            xs = next(dataset)
+
+            # we need to pad a little bit for mnist dataset.
+            if config.dataset == 'mnist':
+                xs = np.reshape(xs, [config.batch_size, 28, 28, 1]) - 0.5
+                xs *= 2.
+                xs = np.lib.pad(
+                    xs, ((0, 0), (2, 2), (2, 2), (0, 0)), 'constant',
+                    constant_values=(-1, -1)
+                )
 
             # run discriminator trainer
             _, d_loss = sess.run(

@@ -1,3 +1,4 @@
+import functools
 import struct
 import os
 import os.path
@@ -8,6 +9,10 @@ import lmdb
 from PIL import Image
 import utils
 
+
+# ===========================
+# Dataset export / Utilities
+# ===========================
 
 def export_mdb_images(db_path, out_dir=None, flat=True, limit=-1, size=256):
     out_dir = out_dir or db_path
@@ -43,13 +48,26 @@ def export_mdb_images(db_path, out_dir=None, flat=True, limit=-1, size=256):
                 print('Finished', count, 'images')
 
 
-# ===============
-# DATASET READERS
-# ===============
+def dataset(name, image_size=None, channel_size=None):
+    def decorator(dataset_generator):
+        @functools.wraps(dataset_generator)
+        def wrapper(*args, **kwargs):
+            return dataset_generator(*args, **kwargs)
+        wrapper.name = name
+        wrapper.image_size = image_size
+        wrapper.channel_size = channel_size
+        return wrapper
+    return decorator
 
-def read_images(batch_size, dirpath,
-                resize_height, resize_width,
-                is_crop=True, is_grayscale=False):
+
+# ========
+# Datasets
+# ========
+
+@dataset('images')
+def image_dataset(batch_size, dirpath,
+                  resize_height, resize_width,
+                  is_crop=True, is_grayscale=False):
     paths = [
         os.path.join(dirpath, name) for name in os.listdir(dirpath) if
         name.endswith('.jpg')
@@ -69,7 +87,8 @@ def read_images(batch_size, dirpath,
         yield batch_images
 
 
-def read_mnist(batch_size, test=False):
+@dataset('mnist', image_size=32, channel_size=1)
+def mnist_dataset(batch_size, test=False):
     if test:
         fname_img = './data/mnist/val/t10k-images-idx3-ubyte'
         fname_lbl = './data/mnist/val/t10k-labels-idx1-ubyte'
@@ -77,25 +96,32 @@ def read_mnist(batch_size, test=False):
         fname_img = './data/mnist/train/train-images-idx3-ubyte'
         fname_lbl = './data/mnist/train/train-labels-idx1-ubyte'
 
-    with open(fname_lbl, 'rb') as flbl:
-        magic, num, rows, cols = struct.unpack('>II', flbl.read(8))
-        lbl = np.fromfile(flbl, dtype=np.int8)
+    with open(fname_lbl, 'rb') as fd:
+        magic, num = struct.unpack('>II', fd.read(8))
+        labels = np.fromfile(fd, dtype=np.int8)
 
-    with open(fname_img, 'rb') as fimg:
-        magic, num, rows, cols = struct.unpack('>IIII', fimg.read(16))
-        img = np.fromfile(fimg, dtype=np.uint8).reshape(len(lbl), rows, cols)
+    with open(fname_img, 'rb') as fd:
+        magic, num, rows, cols = struct.unpack('>IIII', fd.read(16))
+        images = np.fromfile(fd, dtype=np.uint8).reshape(
+            len(labels), rows, cols
+        )
 
-    for i in range(0, len(lbl), batch_size):
-        yield img[i:i+batch_size]
+    seed = 547
+    np.random.seed(seed)
+    np.random.shuffle(images)
+
+    for i in range(0, len(labels), batch_size):
+        yield images[i:i+batch_size]
 
 
-def read_lsun(batch_size, test=False):
+@dataset('lsun', image_size=256, channel_size=3)
+def lsun_dataset(batch_size, test=False):
     path = './data/lsun/val' if test else './data/lsun/train'
-    return read_images(batch_size, path, 256, 256)
+    return image_dataset(batch_size, path, 256, 256)
 
 
-DATASET_READERS = {
-    'mnist': read_mnist,
-    'lsun': read_lsun,
-    'images': read_images,
+DATASETS = {
+    mnist_dataset.name: mnist_dataset,
+    lsun_dataset.name: lsun_dataset,
+    image_dataset.name: image_dataset,
 }

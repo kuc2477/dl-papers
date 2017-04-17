@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import slim
 from activations import lrelu
@@ -24,10 +23,10 @@ class DCGAN(object):
         self.d_filter_size = d_filter_size
 
         # basic placeholders
-        self.z_in = z_in = tf.placeholder(
+        self.z_in = tf.placeholder(
             shape=[None, z_size], dtype=tf.float32
         )
-        self.image_in = image_in = tf.placeholder(
+        self.image_in = tf.placeholder(
             shape=[None, image_size, image_size, channel_size],
             dtype=tf.float32,
         )
