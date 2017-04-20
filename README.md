@@ -5,31 +5,31 @@
 
 
 ## CNN
-- *Striving for Simplicity: The All Convolutional Net (Springenberg, Jost Tobias et al.)* [[arxiv, 14.12]](http://arxiv.org/abs/1412.6806)
-- *Learning Deconvolution Network for Semantic Segmentation (Noh, Hong, Han et al.)*  [[arxiv, 15.05]](https://arxiv.org/abs/1505.04366)
-- *Fully Convolutional Networks for Semantic Segmentation (Long, Jonathan Shelhamer et al.)* [[arxiv, 16.05]](https://arxiv.org/abs/1605.06211)
+- *Striving for Simplicity: The All Convolutional Net * [[arxiv, 14.12]](http://arxiv.org/abs/1412.6806)
+- *Learning Deconvolution Network for Semantic Segmentation *  [[arxiv, 15.05]](https://arxiv.org/abs/1505.04366)
+- *Fully Convolutional Networks for Semantic Segmentation * [[arxiv, 16.05]](https://arxiv.org/abs/1605.06211)
 
 
 ## RNN
-- *Generating Sequences With Recurrent Neural Networks (A. Graves)* [[arxiv, 13.08]](http://arxiv.org/abs/1308.0850)
+- *Generating Sequences With Recurrent Neural Networks * [[arxiv, 13.08]](http://arxiv.org/abs/1308.0850)
 
 
 ## Memory Networks
-- *Neural Turing Machines (A. Graves, G. Wayne, I. Danihelka)* [[arxiv, 14.10]](http://arxiv.org/abs/1410.5401)
+- *Neural Turing Machines * [[arxiv, 14.10]](http://arxiv.org/abs/1410.5401)
 
 
 ## Unsupervised Models
-- *Semi-supervised Sequence Learning (A. Dai, Q. Le)* [[arxiv, 15.11]](https://arxiv.org/abs/1511.01432)
+- *Semi-supervised Sequence Learning * [[arxiv, 15.11]](https://arxiv.org/abs/1511.01432)
 
 
 ## Generetive Models
 
 ### GAN
-- *Generative Adversarial Networks (I. Goodfellow, J.Pouget-Abadie, M.Mirza et al.)* [[arxiv, 14.06]](http://arxiv.org/abs/1406.2661)
-- *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks (A. Radford, L. Metz, S.Chintala)* [[arxiv, 15.11]](http://arxiv.org/abs/1511.06434)
-- *Wasserstein GAN (M.Arjovsky, S.Chintala, and L.Bottou)*  [[arxiv, 17.01]](http://arxiv.org/abs/1701.07875)
-- *Boundary-Seeking Generative Adversarial Networks (R. Hjelm, A. Jacob, T. Che et al.)*  [[arxiv, 17.02]](http://arxiv.org/abs/1702.08431)
-- *Learning to Discover Cross-Domain Relations with Generative Adversarial Networks (T.Kim, M. Cha, H. kim et al.)*  [[arxiv, 17.03]](http://arxiv.org/abs/1703.05192)
+- *Generative Adversarial Networks * [[arxiv, 14.06]](http://arxiv.org/abs/1406.2661)
+- *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks* [[arxiv, 15.11]](http://arxiv.org/abs/1511.06434) [[DCGAN]](./GAN/DCGAN)
+- *Wasserstein GAN*  [[arxiv, 17.01]](http://arxiv.org/abs/1701.07875)
+- *Boundary-Seeking Generative Adversarial Networks*  [[arxiv, 17.02]](http://arxiv.org/abs/1702.08431)
+- *Learning to Discover Cross-Domain Relations with Generative Adversarial Networks*  [[arxiv, 17.03]](http://arxiv.org/abs/1703.05192)
 
 ### VAE
 - *Auto-Encoding Variational Bayes (Kingma, Diederik P Welling, Max)* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114)
