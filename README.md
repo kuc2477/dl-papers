@@ -1,5 +1,7 @@
 # Deep Learning Papers
+
 <img src="https://github.com/kuc2477/dl-papers/raw/master/art.jpg" width="200px" height="200px" />  
+
 - Categorized list of Deep Learning papers I read among which gave me **meaningful insights**.
 - Papers are **categorized by their related models and intuitions** behind them.
 - Papers are **listed in their chronological order**.
