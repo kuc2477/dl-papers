@@ -27,6 +27,9 @@
 ### GAN
 - *Generative Adversarial Networks (I. Goodfellow, J.Pouget-Abadie, M.Mirza et al.)* [[arxiv, 14.06]](http://arxiv.org/abs/1406.2661)
 - *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks (A. Radford, L. Metz, S.Chintala)* [[arxiv, 15.11]](http://arxiv.org/abs/1511.06434)
+- *Wasserstein GAN (M.Arjovsky, S.Chintala, and L.Bottou)*  [[arxiv, 17.01]](http://arxiv.org/abs/1701.07875)
+- *Boundary-Seeking Generative Adversarial Networks (R. Hjelm, A. Jacob, T. Che et al.)*  [[arxiv, 17.02]](http://arxiv.org/abs/1702.08431)
+- *Learning to Discover Cross-Domain Relations with Generative Adversarial Networks (T.Kim, M. Cha, H. kim et al.)*  [[arxiv, 17.03]](http://arxiv.org/abs/1703.05192)
 
 ### VAE
 - *Auto-Encoding Variational Bayes (Kingma, Diederik P Welling, Max)* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114)
