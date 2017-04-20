@@ -1,5 +1,8 @@
 # Deep Learning Papers
-<img src="https://github.com/kuc2477/dl-papers/raw/master/art.jpg" margin-left="45px" width="150" height="150" />  
+
+<div style="padding: 20px 40px">
+    <img src="https://github.com/kuc2477/dl-papers/raw/master/art.jpg" width="150" height="150" />  
+</div>
 
 - Categorized list of Deep Learning papers I read among which gave me **meaningful insights**.
 - Papers are **categorized by their related models and intuitions** behind them.
