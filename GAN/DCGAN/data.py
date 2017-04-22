@@ -1,3 +1,4 @@
+import argparse
 import functools
 import struct
 import os
@@ -10,11 +11,11 @@ from PIL import Image
 import utils
 
 
-# ===========================
-# Dataset export / Utilities
-# ===========================
+# =================
+# Dataset Utilities
+# =================
 
-def export_mdb_images(db_path, out_dir=None, flat=True, limit=-1, size=256):
+def _export_mdb_images(db_path, out_dir=None, flat=True, limit=-1, size=256):
     out_dir = out_dir or db_path
     env = lmdb.open(
         db_path, map_size=1099511627776,
@@ -48,7 +49,7 @@ def export_mdb_images(db_path, out_dir=None, flat=True, limit=-1, size=256):
                 print('Finished', count, 'images')
 
 
-def dataset(name, image_size=None, channel_size=None):
+def _dataset(name, image_size=None, channel_size=None):
     def decorator(dataset_generator):
         @functools.wraps(dataset_generator)
         def wrapper(*args, **kwargs):
@@ -64,64 +65,103 @@ def dataset(name, image_size=None, channel_size=None):
 # Datasets
 # ========
 
-@dataset('images')
+@_dataset('images')
 def image_dataset(batch_size, dirpath,
-                  resize_height, resize_width,
-                  is_crop=True, is_grayscale=False):
+                  resize_height=None, resize_width=None,
+                  use_crop=True, is_grayscale=False):
     paths = [
         os.path.join(dirpath, name) for name in os.listdir(dirpath) if
         name.endswith('.jpg')
     ]
-    random.shuffle(paths)
-    for i in range(0, len(paths), batch_size):
-        batch_paths = paths[i:i+batch_size]
-        batch_images = np.array([
-            utils.get_image(
-                p,
-                resize_height=resize_height,
-                resize_width=resize_width,
-                is_crop=is_crop,
-                is_grayscale=is_grayscale
-            ) for p in batch_paths
-        ])
-        yield batch_images
+    while True:
+        random.shuffle(paths)
+        for i in range(0, len(paths), batch_size):
+            batch_paths = paths[i:i+batch_size]
+            batch_images = np.array([
+                utils.get_image(
+                    p,
+                    resize_height=resize_height,
+                    resize_width=resize_width,
+                    use_crop=use_crop, is_grayscale=is_grayscale
+                ) for p in batch_paths
+            ])
+            yield batch_images
 
 
-@dataset('mnist', image_size=32, channel_size=1)
+@_dataset('mnist', image_size=32, channel_size=1)
 def mnist_dataset(batch_size, test=False):
     if test:
         fname_img = './data/mnist/val/t10k-images-idx3-ubyte'
-        fname_lbl = './data/mnist/val/t10k-labels-idx1-ubyte'
     else:
         fname_img = './data/mnist/train/train-images-idx3-ubyte'
-        fname_lbl = './data/mnist/train/train-labels-idx1-ubyte'
-
-    with open(fname_lbl, 'rb') as fd:
-        magic, num = struct.unpack('>II', fd.read(8))
-        labels = np.fromfile(fd, dtype=np.int8)
 
     with open(fname_img, 'rb') as fd:
         magic, num, rows, cols = struct.unpack('>IIII', fd.read(16))
-        images = np.fromfile(fd, dtype=np.uint8).reshape(
-            len(labels), rows, cols
+        images = np.fromfile(fd, dtype=np.uint8)\
+            .reshape((num, rows, cols, 1))\
+            .astype(np.float)
+
+        images /= 255.
+        images = (images - 0.5) * 2.
+        images = np.lib.pad(
+            images, ((0, 0), (2, 2), (2, 2), (0, 0)), 'constant',
+            constant_values=(-1, -1)
         )
 
-    seed = 547
-    np.random.seed(seed)
-    np.random.shuffle(images)
-
-    for i in range(0, len(labels), batch_size):
-        yield images[i:i+batch_size]
+    while True:
+        np.random.shuffle(images)
+        for i in range(0, num, batch_size):
+            yield images[i:i+batch_size]
 
 
-@dataset('lsun', image_size=256, channel_size=3)
-def lsun_dataset(batch_size, test=False):
+@_dataset('lsun', image_size=256, channel_size=3)
+def lsun_dataset(batch_size, test=False, resize=False, use_crop=False):
     path = './data/lsun/val' if test else './data/lsun/train'
-    return image_dataset(batch_size, path, 256, 256)
+    return (
+        image_dataset(batch_size, path, 256, 256, use_crop=use_crop)
+        if resize else image_dataset(batch_size, path)
+    )
 
 
+# datasets available out-of-the-box
 DATASETS = {
     mnist_dataset.name: mnist_dataset,
     lsun_dataset.name: lsun_dataset,
     image_dataset.name: image_dataset,
 }
+
+
+# =============
+# Script Parser
+# =============
+
+def export_lsun(args):
+    with utils.log(
+            'export lsun images from mdb file',
+            'exported lsun images from mdb file'):
+        _export_mdb_images('./data/lsun/train', size=args.size)
+        _export_mdb_images('./data/lsun/val', size=args.size)
+
+
+parser = argparse.ArgumentParser(
+    description='Data pre/post processing CLI script'
+)
+subparsers = parser.add_subparsers(dest='command')
+parser_export_lsun = subparsers.add_parser('export_lsun')
+parser_export_lsun.set_defaults(func=export_lsun)
+parser_export_lsun.add_argument(
+    '--format', type=str, default='jpg', choices=['jpg'],
+    help='format to export'
+)
+parser_export_lsun.add_argument(
+    '--size', type=int, default=256,
+    help='image size to be exported'
+)
+
+
+if __name__ == '__main__':
+    try:
+        args = parser.parse_args()
+        args.func(args)
+    except AttributeError:
+        parser.print_help()

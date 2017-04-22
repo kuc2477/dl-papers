@@ -25,6 +25,11 @@ flags.DEFINE_float('beta1', 0.5, 'momentum term of Adam [0.5]')
 flags.DEFINE_string('dataset', 'mnist', 'dataset to use {}'.format(
     DATASETS.keys()
 ))
+flags.DEFINE_bool('resize', True, 'whether to resize images on the fly or not')
+flags.DEFINE_bool(
+    'crop', True,
+    'whether to use crop for image resizing or not'
+)
 flags.DEFINE_integer('iterations', 5000, 'training iteration number')
 flags.DEFINE_integer('batch_size', 64, 'training batch size')
 flags.DEFINE_integer('sample_size', 36, 'generator sample size')

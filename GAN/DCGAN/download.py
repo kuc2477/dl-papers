@@ -1,5 +1,4 @@
 # Dataset downloading CLI script. Referenced carpedm20's DCGAN-tensorflow.
-from contextlib import contextmanager
 import os
 import os.path
 import argparse
@@ -7,8 +6,8 @@ import subprocess
 import zipfile
 from tqdm import tqdm
 import requests
-from colorama import Fore
 from data import export_mdb_images
+from utils import log, c
 
 
 # =============
@@ -26,16 +25,6 @@ parser.add_argument(
 # ================
 # Helper Functions
 # ================
-
-def _c(string, color):
-    return '{}{}{}'.format(getattr(Fore, color.upper()), string, Fore.RESET)
-
-
-@contextmanager
-def _log(start, end, start_color='yellow', end_color='cyan'):
-    print(_c('>> ' + start, start_color))
-    yield
-    print(_c('>> ' + end, end_color) + '\n')
 
 
 def _download(url, filename=None):
@@ -104,14 +93,14 @@ def maybe_download_lsun(dataset_dirpath, dataset_dirname,
 
     # check existance
     if os.path.exists(dataset_path):
-        print(_c(
+        print(c(
             'lsun dataset already exists: {}'
             .format(dataset_path), 'red'
         ))
         return
 
     # start downloading lsun dataset
-    with _log(
+    with log(
             'download lsun dataset from {}'.format(url),
             'downloaded lsun dataset to {}'.format(dataset_path)):
         _download_zip_dataset(url, dataset_dirpath, dataset_dirname)
@@ -135,7 +124,7 @@ def maybe_download_mnist(dataset_dirpath, dataset_dirname, set_name):
 
     # check existance
     if os.path.exists(dataset_path):
-        print(_c(
+        print(c(
             'mnist dataset already exists: {}'
             .format(dataset_path), 'red'
         ))
@@ -144,7 +133,7 @@ def maybe_download_mnist(dataset_dirpath, dataset_dirname, set_name):
     # start downloading mnist dataset
     for filename in filenames:
         url = base_url + filename
-        with _log(
+        with log(
                 'download mnist dataset from {}'.format(url),
                 'downloaded mnist dataset {} to {}'
                 .format(filename, dataset_path)):
@@ -161,11 +150,6 @@ if __name__ == "__main__":
         maybe_download_lsun(
             './data/lsun', 'val', category='classroom', set_name='val'
         )
-        with _log(
-                'export lsun images from mdb file',
-                'exported lsun images from mdb file'):
-            export_mdb_images('./data/lsun/val')
-            export_mdb_images('./data/lsun/train')
     if 'mnist' in args.datasets:
         maybe_download_mnist('./data/mnist', 'train', set_name='train')
         maybe_download_mnist('./data/mnist', 'val', set_name='val')

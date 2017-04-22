@@ -40,15 +40,6 @@ def train(model, config, sess=None):
             ).astype(np.float32)
             xs = next(dataset)
 
-            # we need to pad a little bit for mnist dataset.
-            if config.dataset == 'mnist':
-                xs = np.reshape(xs, [config.batch_size, 28, 28, 1]) - 0.5
-                xs *= 2.
-                xs = np.lib.pad(
-                    xs, ((0, 0), (2, 2), (2, 2), (0, 0)), 'constant',
-                    constant_values=(-1, -1)
-                )
-
             # run discriminator trainer
             _, d_loss = sess.run(
                 [update_D, model.d_loss],
