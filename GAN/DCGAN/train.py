@@ -26,6 +26,13 @@ def train(model, config, sess=None):
     dataset = DATASETS[config.dataset](config.batch_size)
     saver = tf.train.Saver()
 
+    # z sampling function
+    def _sample_z(cfg):
+        return np.random.uniform(
+            -1., 1., size=[cfg.batch_size, cfg.z_size]
+        ).astype(np.float32)
+
+    # main training session context
     with sess or tf.Session() as sess:
         try:
             sess.run(tf.initialize_all_varaibles())
@@ -33,13 +40,9 @@ def train(model, config, sess=None):
             sess.run(tf.global_variables_initializer())
 
         for i in range(config.iterations):
-            # sample z from uniform distribution and prepare fake/real
-            # images
-            zs = np.random.uniform(
-                -1., 1., size=[config.batch_size, config.z_size]
-            ).astype(np.float32)
+            # sample z prepare real images
+            zs = _sample_z(config)
             xs = next(dataset)
-
             # run discriminator trainer
             _, d_loss = sess.run(
                 [update_D, model.d_loss],
@@ -49,8 +52,9 @@ def train(model, config, sess=None):
                 }
             )
 
-            # run generator trainer
             for _ in range(config.generator_update_ratio):
+                # run generator trainer
+                zs = _sample_z(config)
                 _, g_loss = sess.run(
                     [update_G, model.g_loss],
                     feed_dict={model.z_in: zs}
@@ -64,12 +68,8 @@ def train(model, config, sess=None):
                 if not os.path.exists(config.sample_dir):
                     os.makedirs(config.sample_dir, exist_ok=True)
 
-                # sample z from which to generate images
-                z_sampled = np.random.uniform(
-                    -1., 1., size=[config.batch_size, config.z_size]
-                ).astype(np.float32)
-
                 # generate images from the sampled z
+                z_sampled = _sample_z(config)
                 x_generated = sess.run(
                     model.G, feed_dict={model.z_in: z_sampled}
                 )

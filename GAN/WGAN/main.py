@@ -1,7 +1,7 @@
 import pprint
 import tensorflow as tf
 from data import DATASETS
-from model import DCGAN
+from model import WGAN
 from train import train
 
 
@@ -14,11 +14,11 @@ flags.DEFINE_integer(
     'number of generator\'s filters at the last transposed conv layer'
 )
 flags.DEFINE_integer(
-    'd_filter_number', 64,
-    'number of discriminator\'s filters at the first conv layer'
+    'c_filter_number', 64,
+    'number of critic\'s filters at the first conv layer'
 )
 flags.DEFINE_integer('g_filter_size', 5, 'generator\'s filter size')
-flags.DEFINE_integer('d_filter_size', 4, 'discriminator\'s filter size')
+flags.DEFINE_integer('c_filter_size', 4, 'discriminator\'s filter size')
 flags.DEFINE_float('learning_rate', 0.00002,
                    'learning rate for Adam [0.00002]')
 flags.DEFINE_float('beta1', 0.5, 'momentum term of Adam [0.5]')
@@ -30,16 +30,20 @@ flags.DEFINE_bool(
     'crop', True,
     'whether to use crop for image resizing or not'
 )
+flags.DEFINE_float(
+    'clip_size', 0.01,
+    'parameter clipping size to be applied to the critic'
+)
 flags.DEFINE_integer('iterations', 5000, 'training iteration number')
 flags.DEFINE_integer('batch_size', 64, 'training batch size')
 flags.DEFINE_integer('sample_size', 36, 'generator sample size')
-flags.DEFINE_integer('log_for_every', 100, 'number of batches per logging')
+flags.DEFINE_integer('log_for_every', 10, 'number of batches per logging')
 flags.DEFINE_integer(
     'save_for_every', 1000, 'number of batches per saving the model'
 )
 flags.DEFINE_integer(
-    'generator_update_ratio', 2,
-    'number of updates for generator parameters per discriminator\'s updates'
+    'critic_update_ratio', 2,
+    'number of updates for critic parameters per generator\'s updates'
 )
 flags.DEFINE_bool('test', False, 'flag defining whether it is in test mode')
 flags.DEFINE_string('sample_dir', 'figures', 'directory of generated figures')
@@ -63,14 +67,14 @@ def main(_):
     pprint.PrettyPrinter().pprint(FLAGS.__flags)
 
     # compile the model
-    dcgan = DCGAN(
+    wgan = WGAN(
         z_size=FLAGS.z_size,
         image_size=FLAGS.image_size,
         channel_size=FLAGS.channel_size,
         g_filter_number=FLAGS.g_filter_number,
-        d_filter_number=FLAGS.d_filter_number,
+        c_filter_number=FLAGS.c_filter_number,
         g_filter_size=FLAGS.g_filter_size,
-        d_filter_size=FLAGS.d_filter_size,
+        c_filter_size=FLAGS.c_filter_size,
     )
 
     # test / train the model
@@ -78,7 +82,7 @@ def main(_):
         # TODO: NOT IMPLEMENTED YET
         print('TEST MODE NOT IMPLEMENTED YET')
     else:
-        train(dcgan, FLAGS)
+        train(wgan, FLAGS)
 
 
 if __name__ == '__main__':

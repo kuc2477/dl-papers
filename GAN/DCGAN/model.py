@@ -177,4 +177,4 @@ class DCGAN(object):
             scope='d_out'
         )
 
-        return d_out, tf.nn.sigmoid(d_out)
+        return tf.nn.sigmoid(d_out), d_out

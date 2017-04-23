@@ -3,12 +3,12 @@ from tensorflow.contrib import slim
 from activations import lrelu
 
 
-class DCGAN(object):
+class WGAN(object):
     def __init__(
         self,
         z_size, image_size, channel_size,
-        g_filter_number, d_filter_number,
-        g_filter_size, d_filter_size,
+        g_filter_number, c_filter_number,
+        g_filter_size, c_filter_size,
     ):
         # model-wise initializer
         self._initialzier = tf.truncated_normal_initializer(stddev=0.002)
@@ -18,9 +18,9 @@ class DCGAN(object):
         self.image_size = image_size
         self.channel_size = channel_size
         self.g_filter_number = g_filter_number
-        self.d_filter_number = d_filter_number
+        self.c_filter_number = c_filter_number
         self.g_filter_size = g_filter_size
-        self.d_filter_size = d_filter_size
+        self.c_filter_size = c_filter_size
 
         # basic placeholders
         self.z_in = tf.placeholder(
@@ -31,30 +31,21 @@ class DCGAN(object):
             dtype=tf.float32,
         )
 
-        # build graph using a generator and a discriminator.
+        # build graph using a generator and a critic.
         self.G = self.generator(self.z_in)
-        self.D_x, self.D_x_logits = self.discriminator(self.image_in)
-        self.D_g, self.D_g_logits = self.discriminator(self.G, reuse=True)
+        self.C_x, self.C_x_logits = self.critic(self.image_in)
+        self.C_g, self.C_g_logits = self.critic(self.G, reuse=True)
 
         # build objective function
-        self.d_loss_real = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=self.D_x_logits, labels=tf.ones_like(self.D_x)
-            )
+        self.c_expected_logits_real = tf.reduce_mean(self.C_x_logits)
+        self.c_expected_logits_fake = tf.reduce_mean(self.C_g_logits)
+        self.c_loss = -(
+            self.c_expected_logits_real -
+            self.c_expected_logits_fake
         )
-        self.d_loss_fake = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=self.D_g_logits, labels=tf.zeros_like(self.D_g)
-            )
-        )
-        self.d_loss = self.d_loss_real + self.d_loss_fake
-        self.g_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=self.D_g_logits, labels=tf.ones_like(self.D_g)
-            )
-        )
+        self.g_loss = -self.c_expected_logits_fake
         self.g_vars = [v for v in tf.trainable_variables() if 'g_' in v.name]
-        self.d_vars = [v for v in tf.trainable_variables() if 'd_' in v.name]
+        self.c_vars = [v for v in tf.trainable_variables() if 'c_' in v.name]
 
     def generator(self, z):
         # project z
@@ -128,53 +119,53 @@ class DCGAN(object):
 
         return g_out
 
-    def discriminator(self, bottom, reuse=False):
-        d_conv1_filter_number = self.d_filter_number
-        d_conv1 = slim.convolution2d(
+    def critic(self, bottom, reuse=False):
+        c_conv1_filter_number = self.c_filter_number
+        c_conv1 = slim.convolution2d(
             bottom,
-            d_conv1_filter_number,
-            kernel_size=[self.d_filter_size, self.d_filter_size],
+            c_conv1_filter_number,
+            kernel_size=[self.c_filter_size, self.c_filter_size],
             stride=[2, 2], padding='SAME',
             activation_fn=lrelu,
             normalizer_fn=slim.batch_norm,
             biases_initializer=None,
             weights_initializer=self._initialzier,
-            reuse=reuse, scope='d_conv1'
+            reuse=reuse, scope='c_conv1'
         )
 
-        d_conv2_filter_number = d_conv1_filter_number * 2
-        d_conv2 = slim.convolution2d(
-            d_conv1,
-            d_conv2_filter_number,
-            kernel_size=[self.d_filter_size, self.d_filter_size],
+        c_conv2_filter_number = c_conv1_filter_number * 2
+        c_conv2 = slim.convolution2d(
+            c_conv1,
+            c_conv2_filter_number,
+            kernel_size=[self.c_filter_size, self.c_filter_size],
             stride=[2, 2],
             padding='SAME',
             activation_fn=lrelu,
             normalizer_fn=slim.batch_norm,
             biases_initializer=None,
             weights_initializer=self._initialzier,
-            reuse=reuse, scope='d_conv2'
+            reuse=reuse, scope='c_conv2'
         )
 
-        d_conv3_filter_number = d_conv2_filter_number * 2
-        d_conv3 = slim.convolution2d(
-            d_conv2,
-            d_conv3_filter_number,
-            kernel_size=[self.d_filter_size, self.d_filter_size],
+        c_conv3_filter_number = c_conv2_filter_number * 2
+        c_conv3 = slim.convolution2d(
+            c_conv2,
+            c_conv3_filter_number,
+            kernel_size=[self.c_filter_size, self.c_filter_size],
             stride=[2, 2],
             padding='SAME',
             activation_fn=lrelu,
             normalizer_fn=slim.batch_norm,
             biases_initializer=None,
             weights_initializer=self._initialzier,
-            reuse=reuse, scope='d_conv3'
+            reuse=reuse, scope='c_conv3'
         )
 
-        d_out = slim.fully_connected(
-            slim.flatten(d_conv3), 1,
+        c_out = slim.fully_connected(
+            slim.flatten(c_conv3), 1,
             weights_initializer=self._initialzier,
             reuse=reuse,
-            scope='d_out'
+            scope='c_out'
         )
 
-        return d_out, tf.nn.sigmoid(d_out)
+        return tf.nn.sigmoid(c_out), c_out

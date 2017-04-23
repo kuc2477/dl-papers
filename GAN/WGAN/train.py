@@ -7,7 +7,7 @@ from data import DATASETS
 
 def train(model, config, sess=None):
     # define optimizers
-    D_trainer = tf.train.AdamOptimizer(
+    C_traner = tf.train.AdamOptimizer(
         learning_rate=config.learning_rate,
         beta1=config.beta1
     )
@@ -17,15 +17,26 @@ def train(model, config, sess=None):
     )
 
     # get parameter update tasks
-    d_grads = D_trainer.compute_gradients(model.d_loss, var_list=model.d_vars)
+    c_grads = C_traner.compute_gradients(model.c_loss, var_list=model.c_vars)
     g_grads = G_trainer.compute_gradients(model.g_loss, var_list=model.g_vars)
-    update_D = D_trainer.apply_gradients(d_grads)
+    update_C = C_traner.apply_gradients(c_grads)
     update_G = G_trainer.apply_gradients(g_grads)
+    clip_C = [
+        v.assign(tf.clip_by_value(v, -config.clip_size, config.clip_size))
+        for v in model.c_vars
+    ]
 
     # prepare training data and saver
     dataset = DATASETS[config.dataset](config.batch_size)
     saver = tf.train.Saver()
 
+    # z sampling function
+    def _sample_z(cfg):
+        return np.random.uniform(
+            -1., 1., size=[cfg.batch_size, cfg.z_size]
+        ).astype(np.float32)
+
+    # main training session context
     with sess or tf.Session() as sess:
         try:
             sess.run(tf.initialize_all_varaibles())
@@ -33,34 +44,37 @@ def train(model, config, sess=None):
             sess.run(tf.global_variables_initializer())
 
         for i in range(config.iterations):
-            # sample z from uniform distribution and prepare fake/real
-            # images
-            zs = np.random.uniform(
-                -1., 1., size=[config.batch_size, config.z_size]
-            ).astype(np.float32)
-            xs = next(dataset)
-
-            # run discriminator trainer
-            _, d_loss = sess.run(
-                [update_D, model.d_loss],
-                feed_dict={
-                    model.z_in: zs,
-                    model.image_in: xs
-                }
+            critic_update_ratio = (
+                30 if (i < 25 or i % 500 == 0) else
+                config.critic_update_ratio
             )
+            for _ in range(critic_update_ratio):
+                # sample z and prepare real images
+                zs = _sample_z(config)
+                xs = next(dataset)
+                # run critic trainer
+                _, c_loss = sess.run(
+                    [update_C, model.c_loss],
+                    feed_dict={
+                        model.z_in: zs,
+                        model.image_in: xs
+                    }
+                )
+                sess.run(clip_C)
 
             # run generator trainer
-            for _ in range(config.generator_update_ratio):
-                _, g_loss = sess.run(
-                    [update_G, model.g_loss],
-                    feed_dict={model.z_in: zs}
-                )
+            zs = _sample_z(config)
+            _, g_loss = sess.run(
+                [update_G, model.g_loss],
+                feed_dict={model.z_in: zs}
+            )
 
             if i % config.log_for_every == 0:
                 # log current training process status
-                print('Generator Loss: {} / Discriminator Loss: {}'.format(
-                    g_loss, d_loss
-                ))
+                print((
+                    'Generator Loss: {} / '
+                    'Wasserstein Distance: {}'
+                ).format(g_loss, -c_loss))
                 if not os.path.exists(config.sample_dir):
                     os.makedirs(config.sample_dir, exist_ok=True)
 
