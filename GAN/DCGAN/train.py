@@ -2,7 +2,7 @@ import os.path
 import numpy as np
 import tensorflow as tf
 import utils
-from data import DATASETS
+from .data import DATASETS
 
 
 def train(model, config, sess=None):

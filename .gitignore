@@ -92,3 +92,4 @@ ENV/
 *.sw*
 
 checkpoints
+.DS_Store
