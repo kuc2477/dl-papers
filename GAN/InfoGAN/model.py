@@ -3,7 +3,7 @@ from tensorflow.contrib import slim
 from activations import lrelu
 
 
-class DCGAN(object):
+class InfoGAN(object):
     def __init__(
         self,
         z_size, image_size, channel_size,
@@ -128,7 +128,8 @@ class DCGAN(object):
 
         return g_out
 
-    def discriminator(self, bottom, reuse=False):
+    def discriminator(self, bottom, reuse=False,
+                      approximate_posterior_code=False):
         d_conv1_filter_number = self.d_filter_number
         d_conv1 = slim.convolution2d(
             bottom,
@@ -177,4 +178,8 @@ class DCGAN(object):
             scope='d_out'
         )
 
-        return tf.nn.sigmoid(d_out), d_out
+        if not approximate_posterior_code:
+            return tf.nn.sigmoid(d_out), d_out
+        else:
+            # TODO: NOT IMPLEMENTED YET
+            return NotImplementedError

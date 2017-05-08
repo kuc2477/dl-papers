@@ -1,7 +1,7 @@
 import pprint
 import tensorflow as tf
 from data import DATASETS
-from model import DCGAN
+from model import InfoGAN
 from train import train
 
 
@@ -63,7 +63,7 @@ def main(_):
     pprint.PrettyPrinter().pprint(FLAGS.__flags)
 
     # compile the model
-    dcgan = DCGAN(
+    dcgan = InfoGAN(
         z_size=FLAGS.z_size,
         image_size=FLAGS.image_size,
         channel_size=FLAGS.channel_size,
