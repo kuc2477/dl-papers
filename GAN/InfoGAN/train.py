@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import utils
 from data import DATASETS
+from distributions import sample_c, sample_z
 
 
 def train(model, config, sess=None):
@@ -18,19 +19,15 @@ def train(model, config, sess=None):
 
     # get parameter update tasks
     d_grads = D_trainer.compute_gradients(model.d_loss, var_list=model.d_vars)
-    g_grads = G_trainer.compute_gradients(model.g_loss, var_list=model.g_vars)
+    g_grads = G_trainer.compute_gradients(model.g_loss, var_list=(
+        model.g_vars + model.q_vars
+    ))
     update_D = D_trainer.apply_gradients(d_grads)
     update_G = G_trainer.apply_gradients(g_grads)
 
     # prepare training data and saver
     dataset = DATASETS[config.dataset](config.batch_size)
     saver = tf.train.Saver()
-
-    # z sampling function
-    def _sample_z(cfg):
-        return np.random.uniform(
-            -1., 1., size=[cfg.batch_size, cfg.z_size]
-        ).astype(np.float32)
 
     # main training session context
     with sess or tf.Session() as sess:
@@ -41,23 +38,27 @@ def train(model, config, sess=None):
 
         for i in range(config.iterations):
             # sample z prepare real images
-            zs = _sample_z(config)
+            zs = sample_z(config)
+            cs = sample_c(config)
             xs = next(dataset)
             # run discriminator trainer
             _, d_loss = sess.run(
                 [update_D, model.d_loss],
                 feed_dict={
                     model.z_in: zs,
+                    model.c_in: cs,
                     model.image_in: xs
                 }
             )
 
             for _ in range(config.generator_update_ratio):
                 # run generator trainer
-                zs = _sample_z(config)
+                zs = sample_z(config)
                 _, g_loss = sess.run(
-                    [update_G, model.g_loss],
-                    feed_dict={model.z_in: zs}
+                    [update_G, model.g_loss], feed_dict={
+                        model.z_in: zs,
+                        model.c_in: cs
+                    }
                 )
 
             if i % config.log_for_every == 0:
@@ -69,7 +70,7 @@ def train(model, config, sess=None):
                     os.makedirs(config.sample_dir, exist_ok=True)
 
                 # generate images from the sampled z
-                z_sampled = _sample_z(config)
+                z_sampled = sample_z(config)
                 x_generated = sess.run(
                     model.G, feed_dict={model.z_in: z_sampled}
                 )

@@ -10,3 +10,4 @@ colorama
 requests
 tqdm
 lmdb
+ipython

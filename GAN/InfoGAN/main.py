@@ -23,6 +23,10 @@ parser.add_argument(
     help='distribution of latent code'
 )
 parser.add_argument(
+    '--reg-rate', type=float, default=0.5,
+    nargs='?', help='information regularization coefficient'
+)
+parser.add_argument(
     '--image-size', type=int, default=32,
     help='size of image [32]'
 )
@@ -45,6 +49,10 @@ parser.add_argument(
 parser.add_argument(
     '--d-filter-size', type=int, default=4,
     help='discriminator\'s filter size'
+)
+parser.add_argument(
+    '--q-hidden-size', type=int, default=128,
+    help='posterior latent code approximator network\'s hidden layer size'
 )
 parser.add_argument(
     '--learning-rate', type=float, default=0.00002,
@@ -141,8 +149,12 @@ def main(_):
     # compile the model
     dcgan = InfoGAN(
         z_size=options.z_size,
+        c_sizes=options.c_sizes,
+        c_distributions=[DISTRIBUTIONS[k] for k in options.c_distributions],
+        reg_rate=options.reg_rate,
         image_size=options.image_size,
         channel_size=options.channel_size,
+        q_hidden_size=options.q_hidden_size,
         g_filter_number=options.g_filter_number,
         d_filter_number=options.d_filter_number,
         g_filter_size=options.g_filter_size,
