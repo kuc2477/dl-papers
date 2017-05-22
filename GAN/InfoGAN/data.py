@@ -49,7 +49,10 @@ def _export_mdb_images(db_path, out_dir=None, flat=True, limit=-1, size=256):
                 print('Finished', count, 'images')
 
 
-def _dataset(name, image_size=None, channel_size=None):
+def _dataset(
+        name,
+        image_size=None, channel_size=None,
+        c_sizes=None, c_distributions=None):
     def decorator(dataset_generator):
         @functools.wraps(dataset_generator)
         def wrapper(*args, **kwargs):
@@ -57,6 +60,8 @@ def _dataset(name, image_size=None, channel_size=None):
         wrapper.name = name
         wrapper.image_size = image_size
         wrapper.channel_size = channel_size
+        wrapper.c_sizes = c_sizes
+        wrapper.c_distributions = c_distributions
         return wrapper
     return decorator
 
@@ -88,7 +93,10 @@ def image_dataset(batch_size, dirpath,
             yield batch_images
 
 
-@_dataset('mnist', image_size=32, channel_size=1)
+@_dataset('mnist',
+          image_size=32, channel_size=1,
+          c_sizes=[10, 5],
+          c_distributions=['categorical', 'uniform'])
 def mnist_dataset(batch_size, test=False):
     if test:
         fname_img = './data/mnist/val/t10k-images-idx3-ubyte'
@@ -114,7 +122,9 @@ def mnist_dataset(batch_size, test=False):
             yield images[i:i+batch_size]
 
 
-@_dataset('lsun', image_size=256, channel_size=3)
+@_dataset('lsun',
+          image_size=256, channel_size=3,
+          c_sizes=[20], c_distributions=['uniform'])
 def lsun_dataset(batch_size, test=False, resize=False, use_crop=False):
     path = './data/lsun/val' if test else './data/lsun/train'
     return (

@@ -1,84 +1,160 @@
-import pprint
+import json
+import argparse
 import tensorflow as tf
 from data import DATASETS
 from model import InfoGAN
 from train import train
+from distributions import DISTRIBUTIONS
 
 
-flags = tf.app.flags
-flags.DEFINE_integer('z_size', 100, 'size of latent code z [100]')
-flags.DEFINE_integer('image_size', 32, 'size of image [32]')
-flags.DEFINE_integer('channel_size', 1, 'size of channel [1]')
-flags.DEFINE_integer(
-    'g_filter_number', 64,
-    'number of generator\'s filters at the last transposed conv layer'
+parser = argparse.ArgumentParser('InfoGAN CLI')
+parser.add_argument(
+    '--z-size', type=int, default=100,
+    help='size of latent code z [100]'
 )
-flags.DEFINE_integer(
-    'd_filter_number', 64,
-    'number of discriminator\'s filters at the first conv layer'
+parser.add_argument(
+    '--c-size', type=int, dest='c_sizes',
+    action='append', nargs='+',
+    help='size of latent code'
 )
-flags.DEFINE_integer('g_filter_size', 5, 'generator\'s filter size')
-flags.DEFINE_integer('d_filter_size', 4, 'discriminator\'s filter size')
-flags.DEFINE_float('learning_rate', 0.00002,
-                   'learning rate for Adam [0.00002]')
-flags.DEFINE_float('beta1', 0.5, 'momentum term of Adam [0.5]')
-flags.DEFINE_string('dataset', 'mnist', 'dataset to use {}'.format(
-    DATASETS.keys()
-))
-flags.DEFINE_bool('resize', True, 'whether to resize images on the fly or not')
-flags.DEFINE_bool(
-    'crop', True,
-    'whether to use crop for image resizing or not'
+parser.add_argument(
+    '--c-dist', dest='c_distributions', choices=DISTRIBUTIONS.keys(),
+    action='append', nargs='+',
+    help='distribution of latent code'
 )
-flags.DEFINE_integer('iterations', 5000, 'training iteration number')
-flags.DEFINE_integer('batch_size', 64, 'training batch size')
-flags.DEFINE_integer('sample_size', 36, 'generator sample size')
-flags.DEFINE_integer('log_for_every', 100, 'number of batches per logging')
-flags.DEFINE_integer(
-    'save_for_every', 1000, 'number of batches per saving the model'
+parser.add_argument(
+    '--image-size', type=int, default=32,
+    help='size of image [32]'
 )
-flags.DEFINE_integer(
-    'generator_update_ratio', 2,
-    'number of updates for generator parameters per discriminator\'s updates'
+parser.add_argument(
+    '--channel-size', type=int, default=1,
+    help='size of channel [1]'
 )
-flags.DEFINE_bool('test', False, 'flag defining whether it is in test mode')
-flags.DEFINE_string('sample_dir', 'figures', 'directory of generated figures')
-flags.DEFINE_string('model_dir', 'checkpoints', 'directory of trained models')
-FLAGS = flags.FLAGS
+parser.add_argument(
+    '--g-filter-number', type=int, default=64,
+    help='number of generator\'s filters at the last transposed conv layer'
+)
+parser.add_argument(
+    '--d-filter-number', type=int, default=64,
+    help='number of discriminator\'s filters at the first conv layer'
+)
+parser.add_argument(
+    '--g-filter-size', type=int, default=5,
+    help='generator\'s filter size'
+)
+parser.add_argument(
+    '--d-filter-size', type=int, default=4,
+    help='discriminator\'s filter size'
+)
+parser.add_argument(
+    '--learning-rate', type=float, default=0.00002,
+    help='learning rate for Adam [0.00002]'
+)
+parser.add_argument(
+    '--beta1', type=float, default=0.5,
+    help='momentum term of Adam [0.5]')
+parser.add_argument(
+    '--dataset', default='mnist',
+    help='dataset to use {}'.format(DATASETS.keys())
+)
+parser.add_argument(
+    '--resize', action='store_true',
+    help='whether to resize images on the fly or not'
+)
+parser.add_argument(
+    '--crop', action='store_false',
+    help='whether to use crop for image resizing or not'
+)
+parser.add_argument(
+    '--iterations', type=int, default=5000,
+    help='training iteration number'
+)
+parser.add_argument(
+    '--batch-size', type=int, default=64,
+    help='training batch size'
+)
+parser.add_argument(
+    '--sample-size', type=int, default=36,
+    help='generator sample size'
+)
+parser.add_argument(
+    '--log-for-every', type=int, default=100,
+    help='number of batches per logging'
+)
+parser.add_argument(
+    '--save-for-every', type=int, default=1000,
+    help='number of batches per saving the model'
+)
+parser.add_argument(
+    '--generator-update-ratio', type=int, default=2,
+    help=(
+        'number of updates for generator parameters per '
+        'discriminator\'s updates'
+    )
+)
+parser.add_argument(
+    '--test', action='store_true',
+    help='flag defining whether it is in test mode'
+)
+parser.add_argument(
+    '--sample-dir', default='figures',
+    help='directory of generated figures'
+)
+parser.add_argument(
+    '--model-dir', default='checkpoints',
+    help='directory of trained models'
+)
 
 
-def _patch_flags_with_dataset(flags_):
-    flags_.image_size = DATASETS[flags_.dataset].image_size or \
-        flags_.image_size
-    flags_.channel_size = DATASETS[flags_.dataset].channel_size or \
-        flags_.channel_size
-    return flags_
+def _patch_args_with_dataset(args):
+    dataset_config = DATASETS[args.dataset]
+    args.image_size = dataset_config.image_size or args.image_size
+    args.channel_size = dataset_config.channel_size or args.channel_size
+    args.c_distributions = (
+        args.c_distributions or
+        dataset_config.c_distributions
+    )
+    args.c_sizes = (
+        args.c_sizes or
+        dataset_config.c_sizes
+    )
+
+    return args
 
 
 def main(_):
-    global FLAGS
-
     # patch and display flags with dataset's width and height
-    FLAGS = _patch_flags_with_dataset(FLAGS)
-    pprint.PrettyPrinter().pprint(FLAGS.__flags)
+    options = parser.parse_args()
+    options = _patch_args_with_dataset(options)
+    print(json.dumps(options.__dict__, sort_keys=True, indent=4))
+
+    # test argument sanity
+    assert options.c_distributions, 'latent code distributions must be defined'
+    assert options.c_sizes, 'latent code sizes must be defined'
+    assert all([(d in DISTRIBUTIONS) for d in options.c_distributions]), (
+        'unknown latent code distribution: '.format(options.c_distributions)
+    )
+    assert len(options.c_distributions) == len(options.c_sizes), (
+        'latent code specs(distributions and sizes) should be in same length.'
+    )
 
     # compile the model
     dcgan = InfoGAN(
-        z_size=FLAGS.z_size,
-        image_size=FLAGS.image_size,
-        channel_size=FLAGS.channel_size,
-        g_filter_number=FLAGS.g_filter_number,
-        d_filter_number=FLAGS.d_filter_number,
-        g_filter_size=FLAGS.g_filter_size,
-        d_filter_size=FLAGS.d_filter_size,
+        z_size=options.z_size,
+        image_size=options.image_size,
+        channel_size=options.channel_size,
+        g_filter_number=options.g_filter_number,
+        d_filter_number=options.d_filter_number,
+        g_filter_size=options.g_filter_size,
+        d_filter_size=options.d_filter_size,
     )
 
     # test / train the model
-    if FLAGS.test:
+    if options.test:
         # TODO: NOT IMPLEMENTED YET
         print('TEST MODE NOT IMPLEMENTED YET')
     else:
-        train(dcgan, FLAGS)
+        train(dcgan, options)
 
 
 if __name__ == '__main__':
