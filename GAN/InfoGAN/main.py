@@ -114,7 +114,7 @@ parser.add_argument(
 )
 
 
-def _patch_args_with_dataset(args):
+def _patch_dataset_specific_options(args):
     dataset_config = DATASETS[args.dataset]
     args.image_size = dataset_config.image_size or args.image_size
     args.channel_size = dataset_config.channel_size or args.channel_size
@@ -130,18 +130,20 @@ def _patch_args_with_dataset(args):
     return args
 
 
+def _set_concrete_distributions(args):
+    args.c_distributions = [DISTRIBUTIONS[k] for k in args.c_distributions]
+    return args
+
+
 def main(_):
     # patch and display flags with dataset's width and height
     options = parser.parse_args()
-    options = _patch_args_with_dataset(options)
+    options = _patch_dataset_specific_options(options)
     print(json.dumps(options.__dict__, sort_keys=True, indent=4))
 
     # test argument sanity
     assert options.c_distributions, 'latent code distributions must be defined'
     assert options.c_sizes, 'latent code sizes must be defined'
-    assert all([(d in DISTRIBUTIONS) for d in options.c_distributions]), (
-        'unknown latent code distribution: '.format(options.c_distributions)
-    )
     assert len(options.c_distributions) == len(options.c_sizes), (
         'latent code specs(distributions and sizes) should be in same length.'
     )
@@ -150,7 +152,7 @@ def main(_):
     dcgan = InfoGAN(
         z_size=options.z_size,
         c_sizes=options.c_sizes,
-        c_distributions=[DISTRIBUTIONS[k] for k in options.c_distributions],
+        c_distributions=options.c_distributions,
         reg_rate=options.reg_rate,
         image_size=options.image_size,
         channel_size=options.channel_size,

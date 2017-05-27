@@ -18,7 +18,9 @@ def train(model, config, sess=None):
     )
 
     # get parameter update tasks
-    d_grads = D_trainer.compute_gradients(model.d_loss, var_list=model.d_vars)
+    d_grads = D_trainer.compute_gradients(model.d_loss, var_list=(
+        model.d_vars + model.q_vars
+    ))
     g_grads = G_trainer.compute_gradients(model.g_loss, var_list=(
         model.g_vars + model.q_vars
     ))

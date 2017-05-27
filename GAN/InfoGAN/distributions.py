@@ -2,27 +2,56 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.distributions import (
     RelaxedOneHotCategorical,
+    MultivariateNormalDiag,
     Uniform,
 )
 
 
-# distributions allowed
-_TEMPERATURE = 0.08
-DISTRIBUTIONS = {
-    'categorical': lambda size: RelaxedOneHotCategorical(
-        _TEMPERATURE, tf.ones(size) / size
-    ),
-    'uniform': lambda size: Uniform(
-        low=.0, high=tf.ones(size)
+# ===============
+# Hyperparameters
+# ===============
+_TEMPERATURE = 0.25
+
+
+# =============
+# Distributions
+# =============
+
+def uniform(size):
+    return Uniform(low=.0, high=tf.ones(size))
+
+
+def normal(size):
+    return MultivariateNormalDiag(
+        loc=tf.zeros(size),
+        scale_diag=tf.ones(size)
     )
+
+
+def normal_for_given_uniform_size(uniform_dist):
+    return normal(uniform_dist.batch_shape[0])
+
+
+def categorical(size):
+    return RelaxedOneHotCategorical(_TEMPERATURE, tf.ones(size) / size)
+
+
+# distributions allowed
+DISTRIBUTIONS = {
+    'uniform': uniform,
+    'normal': normal,
+    'categorical': categorical,
 }
 
 
+# ========
+# Sampling
+# ========
+
 # z sampling function
 def sample_z(sess, cfg):
-    return np.random.uniform(
-        -1., 1., size=[cfg.batch_size, cfg.z_size]
-    ).astype(np.float32)
+    uniform_distribution = uniform(cfg.z_size)
+    return sess.run(uniform_distribution.sample(cfg.batch_size, 1))
 
 
 # latent code sampling function
