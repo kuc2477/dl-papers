@@ -1,23 +1,26 @@
 import tensorflow as tf
-from tensorflow.contrib.distributions import Uniform
 from tensorflow.contrib import slim
 from activations import lrelu
-from distributions import normal_for_given_uniform_size
+from distributions import Product
 
 
 class InfoGAN(object):
     def __init__(
-            self, z_size, c_sizes, c_distributions, reg_rate,
+            self, z_distributions, c_distributions,
+            batch_size, reg_rate,
             image_size, channel_size, q_hidden_size,
             g_filter_number, d_filter_number,
-            g_filter_size, d_filter_size,):
+            g_filter_size, d_filter_size):
         # model-wise initializer
         self._initialzier = tf.truncated_normal_initializer(stddev=0.002)
 
         # basic hyperparameters
-        self.z_size = z_size
-        self.c_sizes = c_sizes
-        self.c_distributions = c_distributions
+        self.z_distribution = Product([d for d in z_distributions])
+        self.c_distribution = Product([d for d in c_distributions])
+        self.latent_distribution = Product([
+            d for d in z_distributions + c_distributions
+        ])
+        self.batch_size = batch_size
         self.reg_rate = reg_rate
         self.image_size = image_size
         self.channel_size = channel_size
@@ -29,41 +32,54 @@ class InfoGAN(object):
 
         # basic placeholders
         self.z_in = tf.placeholder(
-            shape=[None, z_size], dtype=tf.float32
+            shape=[self.batch_size, self.z_distribution.dim], dtype=tf.float32
         )
         self.c_in = tf.placeholder(
-            shape=[None, sum(c_sizes)], dtype=tf.float32
+            shape=[self.batch_size, self.c_distribution.dim], dtype=tf.float32
         )
         self.image_in = tf.placeholder(
-            shape=[None, image_size, image_size, channel_size],
+            shape=[self.batch_size, image_size, image_size, channel_size],
             dtype=tf.float32,
         )
 
-        # build graph using a generator and a discriminator.
-        self.G = self.generator(self.z_in, self.c_in)
-        self.D_x, self.D_x_logits = self.discriminator(self.image_in)
-        self.D_g, self.D_g_logits = self.discriminator(self.G, reuse=True)
-        self.encoded_G = self.discriminator(self.G, reuse=True, encode=True)
-        self.c_given_G = self.estimate_posterior_latent_code(self.encoded_g)
-        self.estimated_mutual_information = self.estimate_mutual_information(
-            self.c_in, self.c_given_G
-        )
+        # build a generator and a discriminator
+        self.g = self.generator(self.z_in, self.c_in)
+        self.d_x, self.d_x_logits = self.discriminator(self.image_in)
+        self.d_g, self.d_g_logits = self.discriminator(self.g, reuse=True)
+        self.encoded_g = self.discriminator(self.g, reuse=True, encode=True)
+
+        # estimate parameters of the distribution c given g, using the features
+        # extracted from the samples of g.
+        self.estimated_parameters_of_distribution_c_given_g = \
+            self.estimate_parameters_of_distribution_c_given_g(
+                self.encoded_g
+            )
+
+        # estimate mutual information between c and c given g, using the
+        # variational posterior distribution that we estimated above.
+        self.estimated_mutual_information_between_c_and_c_given_g = \
+            self.estimate_mutual_information_between_c_and_c_given_g(
+                self.c_in,
+                self.estimated_parameters_of_distribution_c_given_g
+            )
 
         # build objective functions
         self.d_loss_real = self._sigmoid_cross_entropy_loss(
-            logits=self.D_x_logits, labels=tf.ones_like(self.D_x)
+            logits=self.d_x_logits, labels=tf.ones_like(self.d_x)
         )
         self.d_loss_fake = self._sigmoid_cross_entropy_loss(
-            logits=self.D_g_logits, labels=tf.zeros_like(self.D_g)
+            logits=self.d_g_logits, labels=tf.zeros_like(self.d_g)
         )
         self.d_loss = self.d_loss_real + self.d_loss_fake
         self.g_loss = self._sigmoid_cross_entropy_loss(
-            logits=self.D_g_logits, labels=tf.ones_like(self.D_g)
+            logits=self.d_g_logits, labels=tf.ones_like(self.d_g)
         )
         # regularize objectives to maximize mutual information between
         # original code and reconstructed latent code.
-        self.d_loss -= self.estimated_mutual_information
-        self.g_loss -= self.estimated_mutual_information
+        self.d_loss -= \
+            self.estimated_mutual_information_between_c_and_c_given_g
+        self.g_loss -= \
+            self.estimated_mutual_information_between_c_and_c_given_g
 
         # variables
         self.g_vars = [v for v in tf.trainable_variables() if 'g_' in v.name]
@@ -185,8 +201,9 @@ class InfoGAN(object):
             reuse=reuse, scope='d_conv3'
         )
 
+        d_conv3_flattened = slim.flatten(d_conv3)
         d_out = slim.fully_connected(
-            slim.flatten(d_conv3), 1,
+            d_conv3_flattened, 1,
             weights_initializer=self._initialzier,
             reuse=reuse,
             scope='d_out'
@@ -194,11 +211,12 @@ class InfoGAN(object):
 
         # return the encoded features or the discriminator's judgement.
         if encode:
-            return d_conv3
+            return d_conv3_flattened
         else:
             return tf.nn.sigmoid(d_out), d_out
 
-    def estimate_posterior_latent_code(self, encoded_g, reuse=False):
+    def estimate_parameters_of_distribution_c_given_g(
+            self, encoded_g, reuse=False):
         projected = slim.fully_connected(
             encoded_g, self.q_hidden_size,
             weights_initializer=self._initialzier,
@@ -208,38 +226,42 @@ class InfoGAN(object):
         )
 
         latent_code_approximated = slim.fully_connected(
-            projected, sum(self.c_sizes),
+            projected, self.c_distribution.dist_flat_dim,
             weights_initializer=self._initialzier,
             reuse=reuse, scope='q_out'
         )
 
         return latent_code_approximated
 
-    def estimate_mutual_information(self, c, cg):
-        # Use normal distribution for calculating log likelihood of latent
-        # code from the uniform distributions. This is to avoid 0 likelihoods
-        # from the uniform distributions.
-        c_log_likelihoods = [
-            normal_for_given_uniform_size(d).log_prob(c_)
-            if isinstance(d, Uniform) else d.log_prob(c_)
-            for d, c_ in zip(self.c_distributions, c)
-        ]
-        cg_log_likelihoods = [
-            normal_for_given_uniform_size(d).log_prob(cg_)
-            if isinstance(d, Uniform) else d.log_prob(cg_)
-            for d, cg_ in zip(self.c_distributions, cg)
-        ]
+    def estimate_mutual_information_between_c_and_c_given_g(
+            self, c, estimated_parameters_of_distribution_c_given_g):
+        # Wrap flat estimated parameters into a dictionary.
+        wrapped_parameters = self.c_distribution.activate_dist(
+            estimated_parameters_of_distribution_c_given_g
+        )
 
-        # Estimate entropies of latent code and posterior latent code.
-        estimated_c_entropy = tf.reduce_mean(-c_log_likelihoods)
-        estimated_cg_entropy = tf.reduce_mean(-cg_log_likelihoods)
+        # Calculate log likelihood of the distribution c and the estimated
+        # distribution c given g for the sampled c.
+        c_log_likelihoods = self.c_distribution.logli_prior(c)
+        cg_log_likelihoods = self.c_distribution.logli(
+            c, wrapped_parameters
+        )
 
-        # Return estimated mutual information between latent code and posterior
-        # latent code.
+        # Estimate entropy of the distribution c and the distribution
+        # c given g.
+        estimated_c_entropy = -tf.reduce_mean(
+            c_log_likelihoods, name='estimated_c_entropy'
+        )
+        estimated_cg_entropy = -tf.reduce_mean(
+            cg_log_likelihoods, name='estimated_cg_entropy'
+        )
+
+        # Estimate mutual information between the distribution c and the
+        # distribution c given g.
         return estimated_c_entropy - estimated_cg_entropy
 
     @staticmethod
     def _sigmoid_cross_entropy_loss(logits, labels):
-        return tf.reduce_mean(tf.sigmoid_cross_entropy_with_logits(
+        return tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=logits, labels=labels
         ))

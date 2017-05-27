@@ -3,63 +3,81 @@ import numpy as np
 import tensorflow as tf
 import utils
 from data import DATASETS
-from distributions import sample_c, sample_z
 
 
-def train(model, config, sess=None):
+def train(session, model, config):
     # define optimizers
-    D_trainer = tf.train.AdamOptimizer(
+    d_trainer = tf.train.AdamOptimizer(
         learning_rate=config.learning_rate,
         beta1=config.beta1
     )
-    G_trainer = tf.train.AdamOptimizer(
+    g_trainer = tf.train.AdamOptimizer(
         learning_rate=config.learning_rate,
         beta1=config.beta1,
     )
 
-    # get parameter update tasks
-    d_grads = D_trainer.compute_gradients(model.d_loss, var_list=(
+    # define parameter update tasks
+    d_grads = d_trainer.compute_gradients(model.d_loss, var_list=(
         model.d_vars + model.q_vars
     ))
-    g_grads = G_trainer.compute_gradients(model.g_loss, var_list=(
+    g_grads = g_trainer.compute_gradients(model.g_loss, var_list=(
         model.g_vars + model.q_vars
     ))
-    update_D = D_trainer.apply_gradients(d_grads)
-    update_G = G_trainer.apply_gradients(g_grads)
+    update_d = d_trainer.apply_gradients(d_grads)
+    update_g = g_trainer.apply_gradients(g_grads)
 
     # prepare training data and saver
     dataset = DATASETS[config.dataset](config.batch_size)
     saver = tf.train.Saver()
 
+    # prepare summaries
+    tf.summary.scalar('d_loss_fake', model.d_loss_fake)
+    tf.summary.histogram('encoded_g', model.encoded_g)
+    tf.summary.histogram(
+        'estimated_parameters_of_distribution_c_given_g',
+        model.estimated_parameters_of_distribution_c_given_g
+    )
+    tf.summary.scalar(
+        'estimated_mutual_information_between_c_and_c_given_g',
+        model.estimated_mutual_information_between_c_and_c_given_g
+    )
+    summaries = tf.summary.merge_all()
+    summary_writer = tf.summary.FileWriter('./log', graph=session.graph)
+
     # main training session context
-    with sess or tf.Session() as sess:
+    with session:
         try:
-            sess.run(tf.initialize_all_varaibles())
+            session.run(tf.initialize_all_varaibles())
         except:
-            sess.run(tf.global_variables_initializer())
+            session.run(tf.global_variables_initializer())
 
         for i in range(config.iterations):
             # sample z prepare real images
-            zs = sample_z(config)
-            cs = sample_c(config)
+            zs_d, cs_d = session.run([
+                model.z_distribution.sample_prior(config.batch_size),
+                model.c_distribution.sample_prior(config.batch_size)
+            ])
             xs = next(dataset)
             # run discriminator trainer
-            _, d_loss = sess.run(
-                [update_D, model.d_loss],
+            _, d_loss = session.run(
+                [update_d, model.d_loss],
                 feed_dict={
-                    model.z_in: zs,
-                    model.c_in: cs,
+                    model.z_in: zs_d,
+                    model.c_in: cs_d,
                     model.image_in: xs
                 }
             )
 
             for _ in range(config.generator_update_ratio):
                 # run generator trainer
-                zs = sample_z(config)
-                _, g_loss = sess.run(
-                    [update_G, model.g_loss], feed_dict={
-                        model.z_in: zs,
-                        model.c_in: cs
+                zs_g, cs_g = session.run([
+                    model.z_distribution.sample_prior(config.batch_size),
+                    model.c_distribution.sample_prior(config.batch_size)
+                ])
+                _, g_loss = session.run(
+                    [update_g, model.g_loss], feed_dict={
+                        model.z_in: zs_g,
+                        model.c_in: cs_g
                     }
                 )
 
@@ -71,12 +89,16 @@ def train(model, config, sess=None):
                 if not os.path.exists(config.sample_dir):
                     os.makedirs(config.sample_dir, exist_ok=True)
 
-                # generate images from the sampled z
-                z_sampled = sample_z(config)
-                x_generated = sess.run(
-                    model.G, feed_dict={model.z_in: z_sampled}
+                # generate images and summaries from the sampled z
+                x_generated, summaries_to_be_written = session.run(
+                    [model.g, summaries], feed_dict={
+                        model.z_in: zs_d,
+                        model.c_in: cs_d,
+                        model.image_in: xs
+                    }
                 )
 
+                # write generated images
                 utils.save_images(
                     np.reshape(
                         x_generated[:config.sample_size],
@@ -88,10 +110,13 @@ def train(model, config, sess=None):
                     '{}/fig{}.png'.format(config.sample_dir, i)
                 )
 
+                # write summaries
+                summary_writer.add_summary(summaries_to_be_written, i)
+
             # save the model
             if i % config.save_for_every == 0 and i != 0:
                 if not os.path.exists(config.model_dir):
                     os.makedirs(config.model_dir, exist_ok=True)
                 path = '{}/model-{}.cptk'.format(config.model_dir, i)
-                saver.save(sess, path)
+                saver.save(session, path)
                 print('saved model to {}'.format(path))

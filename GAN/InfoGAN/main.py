@@ -1,3 +1,4 @@
+import copy
 import json
 import argparse
 import tensorflow as tf
@@ -9,18 +10,24 @@ from distributions import DISTRIBUTIONS
 
 parser = argparse.ArgumentParser('InfoGAN CLI')
 parser.add_argument(
-    '--z-size', type=int, default=100,
-    help='size of latent code z [100]'
+    '--z-size', type=int, dest='z_sizes',
+    action='append', nargs='+',
+    help='size of noise latent code z [100]'
+)
+parser.add_argument(
+    '--z-dist', dest='z_distributions', choices=DISTRIBUTIONS.keys(),
+    action='append', nargs='+',
+    help='distribution of noise latent code z'
 )
 parser.add_argument(
     '--c-size', type=int, dest='c_sizes',
     action='append', nargs='+',
-    help='size of latent code'
+    help='size of regularized latent code c'
 )
 parser.add_argument(
     '--c-dist', dest='c_distributions', choices=DISTRIBUTIONS.keys(),
     action='append', nargs='+',
-    help='distribution of latent code'
+    help='distribution of regularized latent code c'
 )
 parser.add_argument(
     '--reg-rate', type=float, default=0.5,
@@ -86,7 +93,7 @@ parser.add_argument(
     help='generator sample size'
 )
 parser.add_argument(
-    '--log-for-every', type=int, default=100,
+    '--log-for-every', type=int, default=10,
     help='number of batches per logging'
 )
 parser.add_argument(
@@ -116,43 +123,73 @@ parser.add_argument(
 
 def _patch_dataset_specific_options(args):
     dataset_config = DATASETS[args.dataset]
+
+    # patch dataset specific image & channel_size
     args.image_size = dataset_config.image_size or args.image_size
     args.channel_size = dataset_config.channel_size or args.channel_size
+
+    # patch dataset specific noise latent code distribution spec
+    args.z_sizes = args.z_sizes or dataset_config.z_sizes
+    args.z_distributions = (
+        args.z_distributions or
+        dataset_config.z_distributions
+    )
+
+    # patch dataset specific regularized latent code distribution spec
+    args.c_sizes = args.c_sizes or dataset_config.c_sizes
     args.c_distributions = (
         args.c_distributions or
         dataset_config.c_distributions
-    )
-    args.c_sizes = (
-        args.c_sizes or
-        dataset_config.c_sizes
     )
 
     return args
 
 
-def _set_concrete_distributions(args):
-    args.c_distributions = [DISTRIBUTIONS[k] for k in args.c_distributions]
+def _patch_with_concrete_distributions(args):
+    args.z_distributions = [
+        DISTRIBUTIONS[name](size) for name, size in
+        zip(args.z_distributions, args.z_sizes)
+    ]
+    args.c_distributions = [
+        DISTRIBUTIONS[name](size) for name, size in
+        zip(args.c_distributions, args.c_sizes)
+    ]
     return args
 
 
 def main(_):
     # patch and display flags with dataset's width and height
-    options = parser.parse_args()
-    options = _patch_dataset_specific_options(options)
-    print(json.dumps(options.__dict__, sort_keys=True, indent=4))
+    raw_options = parser.parse_args()
+    options = _patch_dataset_specific_options(copy.deepcopy(raw_options))
+    options = _patch_with_concrete_distributions(options)
+    print(json.dumps(
+        _patch_dataset_specific_options(raw_options).__dict__,
+        sort_keys=True, indent=4
+    ))
 
     # test argument sanity
-    assert options.c_distributions, 'latent code distributions must be defined'
-    assert options.c_sizes, 'latent code sizes must be defined'
+    assert options.z_sizes, 'noise latent code size must be defined'
+    assert options.z_distributions, (
+        'noise latent code distributions must be defined'
+    )
+    assert options.c_sizes, 'regularized latent code size must be defined'
+    assert options.c_distributions, (
+        'regularized latent code distributions must be defined'
+    )
+    assert len(options.z_distributions) == len(options.z_sizes), (
+        'noise latent code specs(distributions and sizes) should be '
+        'in same length.'
+    )
     assert len(options.c_distributions) == len(options.c_sizes), (
-        'latent code specs(distributions and sizes) should be in same length.'
+        'regularized latent code specs(distributions and sizes) should be '
+        'in same length.'
     )
 
     # compile the model
     dcgan = InfoGAN(
-        z_size=options.z_size,
-        c_sizes=options.c_sizes,
+        z_distributions=options.z_distributions,
         c_distributions=options.c_distributions,
+        batch_size=options.batch_size,
         reg_rate=options.reg_rate,
         image_size=options.image_size,
         channel_size=options.channel_size,
@@ -163,12 +200,15 @@ def main(_):
         d_filter_size=options.d_filter_size,
     )
 
+    # prepare the tensorflow session
+    session = tf.Session()
+
     # test / train the model
     if options.test:
         # TODO: NOT IMPLEMENTED YET
         print('TEST MODE NOT IMPLEMENTED YET')
     else:
-        train(dcgan, options)
+        train(session, dcgan, options)
 
 
 if __name__ == '__main__':
