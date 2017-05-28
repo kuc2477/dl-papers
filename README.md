@@ -1,6 +1,6 @@
 # Deep Learning Papers
 - Papers I read among which gave me **meaningful insights**.
-- Papers are **categorized by problems and intuitions** behind them.
+- Papers are **categorized by idea and problems** behind them.
 - Papers are listed in their **chronological order**.
 - Some of the **papers are implemented** in *TensorFlow* or *PyTorch*.
 
@@ -23,7 +23,7 @@
 - *Generative Adversarial Networks* [[arxiv, 14.06]](http://arxiv.org/abs/1406.2661)
 - *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks* [[arxiv, 15.11]](http://arxiv.org/abs/1511.06434) [[TensorFlow]](./GAN/DCGAN/tensorflow)
 - *InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets* [[arxiv. 16.06]](https://arxiv.org/abs/1606.03657) [[TensorFlow]](./GAN/InfoGAN/tensorflow)
-- *Wasserstein GAN*  [[arxiv, 17.01]](http://arxiv.org/abs/1701.07875) [[TensorFlow]](./GAN/WGAN/tensorflow)
+- *Wasserstein GAN* [[arxiv, 17.01]](http://arxiv.org/abs/1701.07875) [[TensorFlow]](./GAN/WGAN/tensorflow)
 - *Boundary-Seeking Generative Adversarial Networks*  [[arxiv, 17.02]](http://arxiv.org/abs/1702.08431)
 - *Learning to Discover Cross-Domain Relations with Generative Adversarial Networks*  [[arxiv, 17.03]](http://arxiv.org/abs/1703.05192)
 
