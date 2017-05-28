@@ -35,7 +35,7 @@ flags.DEFINE_integer('batch_size', 64, 'training batch size')
 flags.DEFINE_integer('sample_size', 36, 'generator sample size')
 flags.DEFINE_integer('log_for_every', 100, 'number of batches per logging')
 flags.DEFINE_integer(
-    'save_for_every', 1000, 'number of batches per saving the model'
+    'save_for_every', 500, 'number of batches per saving the model'
 )
 flags.DEFINE_integer(
     'generator_update_ratio', 2,

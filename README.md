@@ -1,30 +1,23 @@
 # Deep Learning Papers
-- Categorized list of Deep Learning papers I read among which gave me **meaningful insights**.
-- Papers are **categorized by their related models and intuitions** behind them.
-- Papers are **listed in their chronological order**.
+- Papers I read among which gave me **meaningful insights**.
+- Papers are **categorized by problems and intuitions** behind them.
+- Papers are listed in their **chronological order**.
 - Some of the **papers are implemented** in *TensorFlow* or *PyTorch*.
-- Hope to **maintain near 100% implementation coverage** for the papers.
 
 
-## CNN
+## Model Architecture
+
+### CNN
 - *Striving for Simplicity: The All Convolutional Net* [[arxiv, 14.12]](http://arxiv.org/abs/1412.6806)
-- *Learning Deconvolution Network for Semantic Segmentation*  [[arxiv, 15.05]](https://arxiv.org/abs/1505.04366)
-- *Fully Convolutional Networks for Semantic Segmentation* [[arxiv, 16.05]](https://arxiv.org/abs/1605.06211)
 
 
-## RNN
+## Supervised Learning
+
+
+## Unsupervised Learning
+
+### RNN
 - *Generating Sequences With Recurrent Neural Networks* [[arxiv, 13.08]](http://arxiv.org/abs/1308.0850)
-
-
-## Memory Networks
-- *Neural Turing Machines* [[arxiv, 14.10]](http://arxiv.org/abs/1410.5401)
-
-
-## Unsupervised Models
-- *Semi-supervised Sequence Learning* [[arxiv, 15.11]](https://arxiv.org/abs/1511.01432)
-
-
-## Generetive Models
 
 ### GAN
 - *Generative Adversarial Networks* [[arxiv, 14.06]](http://arxiv.org/abs/1406.2661)
@@ -38,10 +31,17 @@
 - *Auto-Encoding Variational Bayes* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114)
 
 
+## External Memory
+- *Neural Turing Machines* [[arxiv, 14.10]](http://arxiv.org/abs/1410.5401)
+
+
+## Learning Invariance
+- *Spatial Transformer Networks* [[arxiv, 15.06]](http://arxiv.org/abs/1506.02025)
+
+
 ## Attention
 - *Neural Machine Translation by Jointly Learning to Align and Translate* [[arxiv, 14.09]](http://arxiv.org/abs/1409.0473)
 - *Show, Attend and Tell: Neural Image Caption Generation with Visual Attention* [[arxiv, 15.02]](http://arxiv.org/abs/1502.03044)
-- *Spatial Transformer Networks* [[arxiv, 15.06]](http://arxiv.org/abs/1506.02025)
 
 
 ## Learning Optimization
@@ -52,3 +52,10 @@
 - *Visualizing and Understanding Convolutional Networks* [[arxiv, 13.11]](http://arxiv.org/abs/1311.2901)
 - *Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6034)
 - *Understanding Deep Image Representations by Inverting Them* [[arxiv, 14.12]](http://arxiv.org/abs/1412.0035)
+
+
+## Applications
+
+### Semantic Segmentation
+- *Learning Deconvolution Network for Semantic Segmentation*  [[arxiv, 15.05]](https://arxiv.org/abs/1505.04366)
+- *Fully Convolutional Networks for Semantic Segmentation* [[arxiv, 16.05]](https://arxiv.org/abs/1605.06211)
