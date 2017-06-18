@@ -1,4 +1,4 @@
-# :pencil: Deep Learning Papers
+# Deep Learning Papers
 - Papers I read among which gave me **meaningful insights**.
 - Papers are **categorized by idea and problems** behind them.
 - Papers are listed in their **chronological order**.
