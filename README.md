@@ -28,7 +28,7 @@
 - *Learning to Discover Cross-Domain Relations with Generative Adversarial Networks*  [[arxiv, 17.03]](http://arxiv.org/abs/1703.05192)
 
 ### VAE
-- *Auto-Encoding Variational Bayes* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114)
+- *Auto-Encoding Variational Bayes* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114) [[PyTorch]](./VAE/VAE/pytorch)
 
 
 ## External Memory

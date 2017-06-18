@@ -93,3 +93,7 @@ ENV/
 
 checkpoints
 .DS_Store
+
+# pytorch dataset
+processed
+raw
