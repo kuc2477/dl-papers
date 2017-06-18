@@ -1,4 +1,4 @@
-# Deep Learning Papers
+# :pencil: Deep Learning Papers
 - Papers I read among which gave me **meaningful insights**.
 - Papers are **categorized by idea and problems** behind them.
 - Papers are listed in their **chronological order**.
@@ -11,10 +11,7 @@
 - *Striving for Simplicity: The All Convolutional Net* [[arxiv, 14.12]](http://arxiv.org/abs/1412.6806)
 
 
-## Supervised Learning
-
-
-## Unsupervised Learning
+## Representation Learning & Density Estimation
 
 ### RNN
 - *Generating Sequences With Recurrent Neural Networks* [[arxiv, 13.08]](http://arxiv.org/abs/1308.0850)
@@ -29,6 +26,10 @@
 
 ### VAE
 - *Auto-Encoding Variational Bayes* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114) [[PyTorch]](./VAE/VAE/pytorch)
+
+
+## Relational Reasoning
+- *A simple neural network module for relational reasoning* [[arxiv, 17.06]](https://arxiv.org/abs/1706.01427)
 
 
 ## External Memory
