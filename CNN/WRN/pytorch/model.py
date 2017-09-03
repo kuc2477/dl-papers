@@ -4,9 +4,18 @@ import operator
 from torch import nn
 
 
+class LambdaModule(nn.Module):
+    def __init__(self, f):
+        super().__init__()
+        self.f = f
+
+    def forward(self, x):
+        return self.f(x)
+
+
 class SequentialModule(nn.Module):
     def __init__(self):
-        super().__init__(self)
+        super().__init__()
         self.sequential = None
 
     @abc.abstractproperty
@@ -26,19 +35,19 @@ class SequentialModule(nn.Module):
 
 class ResidualBlock(nn.Module):
     def __init__(self, input_channels, output_channels, stride):
-        super().__init__(self)
+        super().__init__()
         # 1
         self.bn1 = nn.BatchNorm2d(input_channels)
         self.relu1 = nn.ReLU(inplace=True)
         self.conv1 = nn.Conv2d(
             input_channels, output_channels,
-            kernel_size=3, stride=1, padding=1, bias=False
+            kernel_size=3, stride=stride, padding=1, bias=False
         )
         # 2
-        self.bn2 = nn.BatchNorm2d(input_channels)
+        self.bn2 = nn.BatchNorm2d(output_channels)
         self.relu2 = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(
-            input_channels, output_channels,
+            output_channels, output_channels,
             kernel_size=3, stride=1, padding=1, bias=False
         )
         # transformation
@@ -57,7 +66,7 @@ class ResidualBlock(nn.Module):
 
 class ResidualBlockGroup(SequentialModule):
     def __init__(self, block_number, input_channels, output_channels, stride):
-        super().__init__(self)
+        super().__init__()
         self.block_number = block_number
         self.input_channels = input_channels
         self.output_channels = output_channels
@@ -80,7 +89,7 @@ class WideResNet(SequentialModule):
                  total_block_number, widen_factor=1,
                  baseline_strides=None,
                  baseline_channels=None):
-        super().__init__(self)
+        super().__init__()
         # data specific hyperparameters.
         self.input_size = input_size
         self.input_channels = input_channels
@@ -98,10 +107,10 @@ class WideResNet(SequentialModule):
         self.group_number = len(self.widened_channels) - 1
 
         # validate total block number.
-        assert len(baseline_channels) == len(baseline_strides)
+        assert len(self.baseline_channels) == len(self.baseline_strides)
         assert (
-            self.block_number % (2*self.group_number) == 0 and
-            self.block_number // (2*self.group_number) >= 1
+            self.total_block_number % (2*self.group_number) == 0 and
+            self.total_block_number // (2*self.group_number) >= 1
         ), 'Total number of residual blocks should be multiples of 2 x N.'
 
         # build the sequential model.
@@ -112,7 +121,7 @@ class WideResNet(SequentialModule):
         # define group configurations.
         blocks_per_group = self.total_block_number // self.group_number
         zipped_group_channels_and_strides = zip(
-            self.widened_channels[:self.group_number],
+            self.widened_channels[:-1],
             self.widened_channels[1:],
             self.baseline_strides[1:]
         )
@@ -138,7 +147,8 @@ class WideResNet(SequentialModule):
         )
 
         # classification scores from linear combinations of features.
+        view = LambdaModule(lambda x: x.view(-1, self.widened_channels[-1]))
         fc = nn.Linear(self.widened_channels[self.group_number], self.classes)
 
         # the final model structure.
-        return [conv, *residual_block_groups, pool, bn, relu, fc]
+        return [conv, *residual_block_groups, pool, bn, relu, view, fc]
