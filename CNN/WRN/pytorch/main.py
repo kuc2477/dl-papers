@@ -20,7 +20,7 @@ parser.add_argument('--test-size', type=int, default=8)
 parser.add_argument('--checkpoint-interval', type=int, default=500)
 parser.add_argument('--model-dir', type=str, default='models')
 parser.add_argument('--resume', action='store_true')
-parser.add_argument('--no-gpus', action='store_false')
+parser.add_argument('--no-gpus', action='store_false', dest='cuda')
 command = parser.add_mutually_exclusive_group(required=True)
 command.add_argument('--test', action='store_true', dest='test')
 command.add_argument('--train', action='store_false', dest='test')
@@ -28,7 +28,7 @@ command.add_argument('--train', action='store_false', dest='test')
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    cuda = torch.cuda.is_available() and not args.no_gpus
+    cuda = torch.cuda.is_available() and args.cuda
     dataset = DATASETS[args.dataset]
     dataset_config = DATASET_CONFIGS[args.dataset]
 
