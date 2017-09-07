@@ -54,10 +54,11 @@ def train(model, dataset, dataset_test=None, model_dir='models',
             ))
 
             if batch_index % checkpoint_interval == 0:
+                print('\n# checkpoint!')
                 # test the model.
                 model_precision = utils.validate(
                     model, dataset_test or dataset,
-                    batch_size=test_size, verbose=False
+                    batch_size=test_size, cuda=cuda, verbose=False
                 )
 
                 # update best precision if needed.
@@ -67,5 +68,6 @@ def train(model, dataset, dataset_test=None, model_dir='models',
                 # save the checkpoint.
                 utils.save_checkpoint(
                     model, model_dir, epoch,
-                    model_precision, best_precision, best=is_best
+                    model_precision, best=is_best
                 )
+                print()

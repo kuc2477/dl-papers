@@ -13,10 +13,10 @@ parser.add_argument(
 )
 parser.add_argument('--total-block-number', type=int, default=60)
 parser.add_argument('--widen-factor', type=int, default=2)
-parser.add_argument('--lr', type=float, default=3e-06)
-parser.add_argument('--epochs', type=int, default=5)
+parser.add_argument('--lr', type=float, default=1e-08)
+parser.add_argument('--epochs', type=int, default=3)
 parser.add_argument('--batch-size', type=int, default=32)
-parser.add_argument('--test-size', type=int, default=8)
+parser.add_argument('--test-size', type=int, default=512)
 parser.add_argument('--checkpoint-interval', type=int, default=500)
 parser.add_argument('--model-dir', type=str, default='models')
 parser.add_argument('--resume', action='store_true')
@@ -48,7 +48,10 @@ if __name__ == '__main__':
     # run the given command.
     if args.test:
         utils.load_checkpoint(wrn, args.model_dir, best=True)
-        utils.validate(wrn, dataset, verbose=True)
+        utils.validate(
+            wrn, dataset, batch_size=args.test_size,
+            cuda=cuda, verbose=True
+        )
     else:
         train(
             wrn, dataset, model_dir=args.model_dir,

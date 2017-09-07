@@ -18,7 +18,8 @@ def save_checkpoint(model, model_dir, epoch, precision, best=True):
     path_best = os.path.join(model_dir, '{}-best'.format(model.name))
 
     # save the checkpoint.
-    os.makedirs(model_dir)
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
     torch.save({
         'state': model.state_dict(),
         'epoch': epoch,
@@ -55,9 +56,13 @@ def load_checkpoint(model, model_dir, best=True):
     return epoch, precision
 
 
-def validate(model, dataset, batch_size=8, cuda=False, verbose=True):
+def validate(model, dataset, batch_size=128, cuda=False, verbose=True):
     data_loader = get_data_loader(dataset, batch_size, cuda=cuda)
-    data, labels = next(data_loader)
-    scores = model(Variable(data))
+    data, labels = next(iter(data_loader))
+    data = Variable(data).cuda() if cuda else Variable(data)
+    labels = Variable(labels).cuda() if cuda else Variable(labels)
+    scores = model(data)
     _, predicted = torch.max(scores, 1)
-    return (predicted == labels).float().mean()
+    precision = (predicted == labels).float().mean()
+    verbose and print('=> precision: {}'.format(precision.data[0]))
+    return precision
