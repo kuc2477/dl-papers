@@ -117,6 +117,15 @@ class WideResNet(SequentialModule):
         self.build()
 
     @property
+    def name(self):
+        return 'WRN-{depth}-{widen_factor}-{size}x{size}x{channels}'.format(
+            depth=(self.total_block_number+4),
+            widen_factor=self.widen_factor,
+            size=self.input_size,
+            channels=self.input_channels,
+        )
+
+    @property
     def layers(self):
         # define group configurations.
         blocks_per_group = self.total_block_number // self.group_number
