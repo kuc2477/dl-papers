@@ -56,13 +56,24 @@ def load_checkpoint(model, model_dir, best=True):
     return epoch, precision
 
 
-def validate(model, dataset, batch_size=128, cuda=False, verbose=True):
-    data_loader = get_data_loader(dataset, batch_size, cuda=cuda)
-    data, labels = next(iter(data_loader))
-    data = Variable(data).cuda() if cuda else Variable(data)
-    labels = Variable(labels).cuda() if cuda else Variable(labels)
-    scores = model(data)
-    _, predicted = torch.max(scores, 1)
-    precision = (predicted == labels).float().mean()
-    verbose and print('=> precision: {}'.format(precision.data[0]))
+def validate(model, dataset, test_size=256, cuda=False, verbose=True):
+    data_loader = get_data_loader(dataset, 32, cuda=cuda)
+    total_tested = 0
+    total_correct = 0
+    for data, labels in data_loader:
+        # break on test size.
+        if total_tested >= test_size:
+            break
+        # test the model.
+        data = Variable(data).cuda() if cuda else Variable(data)
+        labels = Variable(labels).cuda() if cuda else Variable(labels)
+        scores = model(data)
+        _, predicted = torch.max(scores, 1)
+        # update statistics.
+        total_correct += (predicted == labels).sum().data[0]
+        total_tested += len(data)
+
+    precision = total_correct / total_tested
+    if verbose:
+        print('=> precision: {:.3f}'.format(precision))
     return precision
