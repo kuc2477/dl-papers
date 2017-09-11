@@ -1,14 +1,15 @@
 # Deep Learning Papers
-- Papers I read among which gave me **meaningful insights**.
-- Papers are **categorized by idea and problems** behind them.
-- Papers are listed in their **chronological order**.
-- Some of the **papers are implemented** in *TensorFlow* or *PyTorch*.
+- Papers which gave me meaningful insights.
+- Categorized by idea and problems behind them.
+- Sorted by chronological order.
 
 
 ## Model Architecture
 
 ### CNN
 - *Striving for Simplicity: The All Convolutional Net* [[arxiv, 14.12]](http://arxiv.org/abs/1412.6806)
+- Deep Residual Learning for Image Recognition [[arxiv, 15.12]](https://arxiv.org/abs/1512.03385)
+- Wide Residual Networks [[arxiv, 16.05]](https://arxiv.org/abs/1605.07146) [[**PyTorch**]](./CNN/WRN/pytorch)
 
 
 ## Representation Learning & Density Estimation
