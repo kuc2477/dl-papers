@@ -36,6 +36,7 @@ class SequentialModule(nn.Module):
 class ResidualBlock(nn.Module):
     def __init__(self, input_channels, output_channels, stride):
         super().__init__()
+
         # 1
         self.bn1 = nn.BatchNorm2d(input_channels)
         self.relu1 = nn.ReLU(inplace=True)
@@ -85,11 +86,15 @@ class ResidualBlockGroup(SequentialModule):
 
 
 class WideResNet(SequentialModule):
-    def __init__(self, input_size, input_channels, classes,
+    def __init__(self, label, input_size, input_channels, classes,
                  total_block_number, widen_factor=1,
                  baseline_strides=None,
                  baseline_channels=None):
         super().__init__()
+
+        # model name label.
+        self.label = label
+
         # data specific hyperparameters.
         self.input_size = input_size
         self.input_channels = input_channels
@@ -118,11 +123,15 @@ class WideResNet(SequentialModule):
 
     @property
     def name(self):
-        return 'WRN-{depth}-{widen_factor}-{size}x{size}x{channels}'.format(
+        return (
+            'WRN-{depth}-{widen_factor}-'
+            '{label}-{size}x{size}x{channels}'
+        ).format(
             depth=(self.total_block_number+4),
             widen_factor=self.widen_factor,
             size=self.input_size,
             channels=self.input_channels,
+            label=self.label,
         )
 
     @property

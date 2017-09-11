@@ -4,8 +4,8 @@ from tqdm import tqdm
 import utils
 
 
-def train(model, dataset, dataset_test=None, model_dir='models',
-          lr=1e-04, batch_size=32, test_size=16, epochs=5,
+def train(model, train_dataset, test_dataset=None, model_dir='models',
+          lr=1e-04, batch_size=32, test_size=256, epochs=5,
           checkpoint_interval=500, resume=False, cuda=False):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -24,7 +24,9 @@ def train(model, dataset, dataset_test=None, model_dir='models',
 
     for epoch in range(epoch_start, epochs + 1):
         # prepare a data stream for the epoch.
-        data_loader = utils.get_data_loader(dataset, batch_size, cuda=cuda)
+        data_loader = utils.get_data_loader(
+            train_dataset, batch_size, cuda=cuda
+        )
         data_stream = tqdm(enumerate(data_loader, 1))
 
         for batch_index, (data, labels) in data_stream:
@@ -42,23 +44,31 @@ def train(model, dataset, dataset_test=None, model_dir='models',
             # update & display statistics.
             running_loss += loss.data[0]
             data_stream.set_description((
-                'epoch: {epoch} | '
-                'progress: [{trained}/{dataset}] ({progress:.0f}%) | '
-                'loss: {loss}'
+                'epoch: {epoch}/{epochs} | '
+                'progress: [{trained}/{total}] ({progress:.0f}%) | '
+                'loss: {loss:.4}'
             ).format(
                 epoch=epoch,
+                epochs=epochs,
                 trained=batch_index * len(data),
-                dataset=len(data_loader.dataset),
+                total=len(data_loader.dataset),
                 progress=(100. * batch_index / len(data_loader)),
                 loss=(loss.data[0] / len(data))
             ))
 
             if batch_index % checkpoint_interval == 0:
-                print('\n# checkpoint!')
+                # notify that we've reached to a new checkpoint.
+                print()
+                print()
+                print('#############')
+                print('# checkpoint!')
+                print('#############')
+                print()
+
                 # test the model.
                 model_precision = utils.validate(
-                    model, dataset_test or dataset,
-                    batch_size=test_size, cuda=cuda, verbose=False
+                    model, test_dataset or train_dataset,
+                    test_size=test_size, cuda=cuda, verbose=True
                 )
 
                 # update best precision if needed.
@@ -70,4 +80,5 @@ def train(model, dataset, dataset_test=None, model_dir='models',
                     model, model_dir, epoch,
                     model_precision, best=is_best
                 )
+
                 print()
