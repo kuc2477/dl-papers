@@ -36,6 +36,7 @@ if __name__ == '__main__':
 
     # instantiate the model instance.
     wrn = WideResNet(
+        args.dataset,
         dataset_config['size'],
         dataset_config['channels'],
         dataset_config['classes'],

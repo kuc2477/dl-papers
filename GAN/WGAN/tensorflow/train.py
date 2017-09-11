@@ -93,7 +93,8 @@ def train(model, config, sess=None):
                         x_generated[:config.sample_size],
                         [config.sample_size,
                          config.image_size,
-                         config.image_size]
+                         config.image_size,
+                         config.channel_size]
                     ),
                     [config.sample_size // 6, 6],
                     '{}/fig{}.png'.format(config.sample_dir, i)
