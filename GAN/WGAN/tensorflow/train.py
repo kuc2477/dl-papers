@@ -96,7 +96,7 @@ def train(model, config, sess=None):
                          config.image_size,
                          config.channel_size]
                     ),
-                    [config.sample_size // 6, 6],
+                    utils.image_manifold_size(config.sample_size),
                     '{}/fig{}.png'.format(config.sample_dir, i)
                 )
 

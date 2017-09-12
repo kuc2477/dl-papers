@@ -34,7 +34,7 @@ flags.DEFINE_float(
     'clip_size', 0.01,
     'parameter clipping size to be applied to the critic'
 )
-flags.DEFINE_integer('iterations', 5000, 'training iteration number')
+flags.DEFINE_integer('iterations', 50000, 'training iteration number')
 flags.DEFINE_integer('batch_size', 64, 'training batch size')
 flags.DEFINE_integer('sample_size', 36, 'generator sample size')
 flags.DEFINE_integer('log_for_every', 10, 'number of batches per logging')
