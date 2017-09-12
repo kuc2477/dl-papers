@@ -80,7 +80,7 @@ def train(model, config, sess=None):
 
                 # sample z from which to generate images
                 z_sampled = np.random.uniform(
-                    -1., 1., size=[config.batch_size, config.z_size]
+                    -1., 1., size=[config.sample_size, config.z_size]
                 ).astype(np.float32)
 
                 # generate images from the sampled z
