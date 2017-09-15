@@ -94,7 +94,7 @@ def train(model, config, sess=None):
 
                 # test the samples
                 if batch_index % config.log_for_every == 0:
-                    name = 'epoch{}-fig{}.png'.format(epoch, batch_index)
+                    name = 'epoch{}-fig{}'.format(epoch, batch_index)
                     utils.test_samples(sess, model, name, config)
 
             # save the model at the every end of the epochs.
