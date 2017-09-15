@@ -73,19 +73,28 @@ def image_dataset(batch_size, dirpath,
         os.path.join(dirpath, name) for name in os.listdir(dirpath) if
         name.endswith('.jpg')
     ]
-    while True:
-        random.shuffle(paths)
-        for i in range(0, len(paths), batch_size):
-            batch_paths = paths[i:i+batch_size]
-            batch_images = np.array([
-                utils.get_image(
-                    p,
-                    resize_height=resize_height,
-                    resize_width=resize_width,
-                    use_crop=use_crop, is_grayscale=is_grayscale
-                ) for p in batch_paths
-            ])
-            yield batch_images
+
+    # shuffle and yield images
+    random.shuffle(paths)
+    for i in range(0, len(paths), batch_size):
+        batch_paths = paths[i:i+batch_size]
+        batch_images = np.array([
+            utils.get_image(
+                p,
+                resize_height=resize_height,
+                resize_width=resize_width,
+                use_crop=use_crop, is_grayscale=is_grayscale
+            ) for p in batch_paths
+        ])
+        yield batch_images
+
+
+def image_dataset_length(dirpath):
+    paths = [
+        os.path.join(dirpath, name) for name in os.listdir(dirpath) if
+        name.endswith('.jpg')
+    ]
+    return len(paths)
 
 
 @_dataset('mnist', image_size=32, channel_size=1)
@@ -108,19 +117,41 @@ def mnist_dataset(batch_size, test=False):
             constant_values=(-1, -1)
         )
 
-    while True:
-        np.random.shuffle(images)
-        for i in range(0, num, batch_size):
-            yield images[i:i+batch_size]
+    # shuffle and yield images
+    np.random.shuffle(images)
+    for i in range(0, num, batch_size):
+        yield images[i:i+batch_size]
 
 
-@_dataset('lsun', image_size=256, channel_size=3)
-def lsun_dataset(batch_size, test=False, resize=False, use_crop=False):
+def mnist_dataset_length(test=False):
+    if test:
+        fname_img = './data/mnist/val/t10k-images-idx3-ubyte'
+    else:
+        fname_img = './data/mnist/train/train-images-idx3-ubyte'
+
+    with open(fname_img, 'rb') as fd:
+        magic, num, rows, cols = struct.unpack('>IIII', fd.read(16))
+        return num
+
+
+@_dataset('lsun', image_size=64, channel_size=3)
+def lsun_dataset(batch_size,
+                 test=False, resize=True, use_crop=False):
     path = './data/lsun/val' if test else './data/lsun/train'
-    return (
-        image_dataset(batch_size, path, 256, 256, use_crop=use_crop)
-        if resize else image_dataset(batch_size, path)
-    )
+    if resize:
+        return image_dataset(
+            batch_size, path,
+            resize_width=64,
+            resize_height=64,
+            use_crop=use_crop
+        )
+    else:
+        return image_dataset(batch_size, path)
+
+
+def lsun_dataset_length(test=False):
+    path = './data/lsun/val' if test else './data/lsun/train'
+    return image_dataset_length(path)
 
 
 # datasets available out-of-the-box
@@ -128,6 +159,13 @@ DATASETS = {
     mnist_dataset.name: mnist_dataset,
     lsun_dataset.name: lsun_dataset,
     image_dataset.name: image_dataset,
+}
+
+
+DATASET_LENGTH_GETTERS = {
+    mnist_dataset.name: mnist_dataset_length,
+    lsun_dataset.name: lsun_dataset_length,
+    image_dataset.name: image_dataset_length
 }
 
 
@@ -143,9 +181,7 @@ def export_lsun(args):
         _export_mdb_images('./data/lsun/val', size=args.size)
 
 
-parser = argparse.ArgumentParser(
-    description='Data pre/post processing CLI script'
-)
+parser = argparse.ArgumentParser(description='Data pre/post processing CLI')
 subparsers = parser.add_subparsers(dest='command')
 parser_export_lsun = subparsers.add_parser('export_lsun')
 parser_export_lsun.set_defaults(func=export_lsun)
@@ -154,8 +190,7 @@ parser_export_lsun.add_argument(
     help='format to export'
 )
 parser_export_lsun.add_argument(
-    '--size', type=int, default=256,
-    help='image size to be exported'
+    '--size', type=int, default=256, help='image size to be exported'
 )
 
 

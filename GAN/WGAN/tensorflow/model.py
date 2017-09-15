@@ -5,11 +5,14 @@ from activations import lrelu
 
 class WGAN(object):
     def __init__(
-        self,
+        self, label,
         z_size, image_size, channel_size,
         g_filter_number, c_filter_number,
         g_filter_size, c_filter_size,
     ):
+        # model's label.
+        self.label = label
+
         # model-wise initializer
         self._initialzier = tf.truncated_normal_initializer(stddev=0.002)
 
@@ -46,6 +49,21 @@ class WGAN(object):
         self.g_loss = -self.c_expected_logits_fake
         self.g_vars = [v for v in tf.trainable_variables() if 'g_' in v.name]
         self.c_vars = [v for v in tf.trainable_variables() if 'c_' in v.name]
+
+    @property
+    def name(self):
+        return (
+            'WGAN'
+            '-{g_filter_number}g'
+            '-{c_filter_number}c'
+            '-{label}-{size}x{size}x{channels}'
+        ).format(
+            g_filter_number=self.g_filter_number,
+            c_filter_number=self.c_filter_number,
+            label=self.label,
+            size=self.image_size,
+            channels=self.channel_size
+        )
 
     def generator(self, z):
         # project z

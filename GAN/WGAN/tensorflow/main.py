@@ -1,8 +1,10 @@
+import os.path
 import pprint
 import tensorflow as tf
 from data import DATASETS
 from model import WGAN
 from train import train
+import utils
 
 
 flags = tf.app.flags
@@ -10,11 +12,11 @@ flags.DEFINE_integer('z_size', 100, 'size of latent code z [100]')
 flags.DEFINE_integer('image_size', 32, 'size of image [32]')
 flags.DEFINE_integer('channel_size', 1, 'size of channel [1]')
 flags.DEFINE_integer(
-    'g_filter_number', 4,
+    'g_filter_number', 64,
     'number of generator\'s filters at the last transposed conv layer'
 )
 flags.DEFINE_integer(
-    'c_filter_number', 4,
+    'c_filter_number', 64,
     'number of critic\'s filters at the first conv layer'
 )
 flags.DEFINE_integer('g_filter_size', 3, 'generator\'s filter size')
@@ -34,20 +36,20 @@ flags.DEFINE_float(
     'clip_size', 0.01,
     'parameter clipping size to be applied to the critic'
 )
-flags.DEFINE_integer('iterations', 50000, 'training iteration number')
+flags.DEFINE_boolean('resume', False, 'whether to resume training or not')
+flags.DEFINE_integer('epochs', 10, 'number of the epochs to train')
 flags.DEFINE_integer('batch_size', 32, 'training batch size')
 flags.DEFINE_integer('sample_size', 36, 'generator sample size')
 flags.DEFINE_integer('log_for_every', 10, 'number of batches per logging')
-flags.DEFINE_integer(
-    'save_for_every', 1000, 'number of batches per saving the model'
-)
 flags.DEFINE_integer(
     'critic_update_ratio', 2,
     'number of updates for critic parameters per generator\'s updates'
 )
 flags.DEFINE_bool('test', False, 'flag defining whether it is in test mode')
 flags.DEFINE_string('sample_dir', 'figures', 'directory of generated figures')
-flags.DEFINE_string('model_dir', 'checkpoints', 'directory of trained models')
+flags.DEFINE_string(
+    'checkpoint_dir', 'checkpoints', 'directory of model checkpoints'
+)
 FLAGS = flags.FLAGS
 
 
@@ -68,6 +70,7 @@ def main(_):
 
     # compile the model
     wgan = WGAN(
+        label=FLAGS.dataset,
         z_size=FLAGS.z_size,
         image_size=FLAGS.image_size,
         channel_size=FLAGS.channel_size,
@@ -79,8 +82,13 @@ def main(_):
 
     # test / train the model
     if FLAGS.test:
-        # TODO: NOT IMPLEMENTED YET
-        print('TEST MODE NOT IMPLEMENTED YET')
+        with tf.Session() as sess:
+            name = '_{}_test_figures'.format(wgan.name)
+            utils.load_checkpoint(sess, wgan, FLAGS)
+            utils.test_samples(sess, wgan, name, FLAGS)
+            print('=> generated test figures for {} at {}'.format(
+                wgan.name, os.path.join(FLAGS.sample_dir, name)
+            ))
     else:
         train(wgan, FLAGS)
 

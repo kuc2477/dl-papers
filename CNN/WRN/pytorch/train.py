@@ -80,5 +80,4 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                     model, model_dir, epoch,
                     model_precision, best=is_best
                 )
-
                 print()
