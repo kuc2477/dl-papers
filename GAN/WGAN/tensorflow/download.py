@@ -144,10 +144,10 @@ if __name__ == "__main__":
 
     if 'lsun' in args.datasets:
         maybe_download_lsun(
-            './data/lsun', 'train', category='classroom', set_name='train'
+            './data/lsun', 'train', category='living_room', set_name='train'
         )
         maybe_download_lsun(
-            './data/lsun', 'val', category='classroom', set_name='val'
+            './data/lsun', 'val', category='living_room', set_name='val'
         )
     if 'mnist' in args.datasets:
         maybe_download_mnist('./data/mnist', 'train', set_name='train')

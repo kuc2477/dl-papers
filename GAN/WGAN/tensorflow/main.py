@@ -40,7 +40,7 @@ flags.DEFINE_boolean('resume', False, 'whether to resume training or not')
 flags.DEFINE_integer('epochs', 10, 'number of the epochs to train')
 flags.DEFINE_integer('batch_size', 32, 'training batch size')
 flags.DEFINE_integer('sample_size', 36, 'generator sample size')
-flags.DEFINE_integer('log_for_every', 10, 'number of batches per logging')
+flags.DEFINE_integer('log_for_every', 100, 'number of batches per logging')
 flags.DEFINE_integer(
     'critic_update_ratio', 2,
     'number of updates for critic parameters per generator\'s updates'

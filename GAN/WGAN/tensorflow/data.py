@@ -19,7 +19,7 @@ def _export_mdb_images(db_path, out_dir=None, flat=True, limit=-1, size=256):
     out_dir = out_dir or db_path
     env = lmdb.open(
         db_path, map_size=1099511627776,
-        max_readers=100, readonly=True
+        max_readers=1000, readonly=True
     )
     count = 0
     with env.begin(write=False) as txn:
