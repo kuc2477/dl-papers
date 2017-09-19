@@ -34,7 +34,8 @@ class SequentialModule(nn.Module):
 # ================
 
 class ResidualBlock(nn.Module):
-    def __init__(self, input_channels, output_channels, stride):
+    def __init__(self, input_channels, output_channels, stride,
+                 split_weight=False, split_q=None):
         super().__init__()
 
         # 1
