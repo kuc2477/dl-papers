@@ -1,6 +1,7 @@
 import abc
-from functools import reduce, partial
+import copy
 import operator
+from functools import reduce, partial
 from torch import nn
 import splits
 
@@ -197,6 +198,7 @@ class WideResNet(WeightRegularized):
         ), 'Total number of residual blocks should be multiples of 2 x N.'
 
         # Residual block group configurations.
+        split_groups_stack = copy.deepcopy(self.split_groups)
         blocks_per_group = self.total_block_number // self.group_number
         zipped_channels_and_strides = zip(
             self.widened_channels[:-1],
@@ -207,7 +209,7 @@ class WideResNet(WeightRegularized):
         # 4. Affine layer.
         self.fc = RegularizedLinear(
             self.widened_channels[self.group_number], self.classes,
-            split_group_number=self.split_groups[-1]
+            split_group_number=split_groups_stack.pop()
         )
 
         # 3. Batchnorm & nonlinearity & pooling.
@@ -221,11 +223,24 @@ class WideResNet(WeightRegularized):
         # 2. Residual block groups.
         self.residual_block_groups = []
         for k, (i, o, s) in reversed(enumerate(zipped_channels_and_strides)):
-            # TODO: NOT IMPLEMENTED YET
-            block_group = ResidualBlockGroup(
+            is_last = (k == len(zipped_channels_and_strides) - 1)
+            try:
+                # Case of splitting a residual block group.
+                split_group_number = split_groups_stack.pop()
+                split_q_last = splits.merge_split_indicator(
+                    self.fc.p, split_group_number
+                ) if is_last else self.residual_block_groups[k+1]
+            except IndexError:
+                # Case of not splitting a residual block group.
+                split_group_number = None
+                split_q_last = None
+
+            # Push the residual block groups from upside down.
+            self.residual_block_groups.insert(0, ResidualBlockGroup(
                 blocks_per_group, i, o, s,
-            )
-            self.residual_block_groups.insert(0, block_group)
+                split_group_number=split_group_number,
+                split_q_last=split_q_last,
+            ))
 
         # 1. Convolution layer.
         self.conv = nn.Conv2d(
