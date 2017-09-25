@@ -14,7 +14,7 @@ parser.add_argument(
 )
 parser.add_argument('--total-block-number', type=int, default=36)
 parser.add_argument('--widen-factor', type=int, default=4)
-parser.add_argument('--group-sizes', type=int, default=[2, 2, 2], nargs='+')
+parser.add_argument('--split-sizes', type=int, default=[2, 2, 2], nargs='+')
 parser.add_argument('--alpha')
 parser.add_argument('--lr', type=float, default=1e-04)
 parser.add_argument('--epochs', type=int, default=10)
