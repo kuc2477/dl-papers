@@ -4,10 +4,10 @@ from torch import nn
 from torch.autograd import Variable
 
 
-def split_loss(w, p, q):
+def split_loss(w, p, q, cuda=True):
     splits, p_dimension = p.size()
     splits_, q_dimension = q.size()
-    in_dimension, out_dimension = w.size()[-2:]
+    out_dimension, in_dimension = w.size()[:2]
 
     # Validate shape of the weight and split indicators.
     assert len(w.size()) in (2, 4)
@@ -20,7 +20,7 @@ def split_loss(w, p, q):
 
     # 1. Overlap loss.
     p_overlap_loss = sum([
-        torch.sum(p[i, :] * q[j, :])
+        torch.sum(p[i, :] * p[j, :])
         for j in range(splits)
         for i in range(splits)
         if i > j
@@ -42,12 +42,15 @@ def split_loss(w, p, q):
 
     # 3. Split loss.
     is_tensor = len(w.size()) == 4
-    ones_col = torch.ones((in_dimension,))
-    ones_row = torch.ones((out_dimension,))
+    ones_col = Variable(torch.ones((in_dimension,)))
+    ones_row = Variable(torch.ones((out_dimension,)))
+    if cuda:
+        ones_col = ones_col.cuda()
+        ones_row = ones_row.cuda()
 
     if is_tensor:
-        w_norm = w.mean(0).mean(1)
-        stddev = np.sqrt(1./w.size()[0]**2/in_dimension)
+        w_norm = w.mean(-1).mean(-1)
+        stddev = np.sqrt(1./w.size()[2]**2/in_dimension)
     else:
         w_norm = w
         stddev = np.sqrt(1./in_dimension)
@@ -56,21 +59,21 @@ def split_loss(w, p, q):
     # 3-1. Find split loss - l2 of inappropriate weights - for each groups.
     for i in range(splits):
         if is_tensor:
-            wg_row = (w_norm * q[i, :]**2).t() * (ones_col-p[i, :])**2
-            wg_row_l2 = wg_row.sum(dim=1).sqrt().sum() / (
+            wg_row = (w_norm.t() * q[i, :]**2).t() * (ones_col-p[i, :])**2
+            wg_row_l2 = wg_row.sum(dim=0).sqrt().sum() / (
                 in_dimension*np.sqrt(out_dimension)
             )
-            wg_col = (w_norm * (ones_row-q[i, :])**2).t() * p[i, :]**2
-            wg_col_l2 = wg_col.sum(dim=0).sqrt().sum() / (
+            wg_col = (w_norm.t() * (ones_row-q[i, :])**2).t() * p[i, :]**2
+            wg_col_l2 = wg_col.sum(dim=1).sqrt().sum() / (
                 out_dimension*np.sqrt(in_dimension)
             )
         else:
-            wg_row = (w_norm * q[i, :]).t() * (ones_col-p[i, :])
-            wg_row_l2 = (wg_row**2).sum(dim=1) / (
+            wg_row = (w_norm.t() * q[i, :]).t() * (ones_col-p[i, :])
+            wg_row_l2 = (wg_row**2).sum(dim=0) / (
                 in_dimension*np.sqrt(out_dimension)
             )
-            wg_col = (w_norm * (ones_row-q[i, :])).t() * p[i, :]
-            wg_col_l2 = (wg_col**2).sum(dim=0) / (
+            wg_col = (w_norm.t() * (ones_row-q[i, :])).t() * p[i, :]
+            wg_col_l2 = (wg_col**2).sum(dim=1) / (
                 out_dimension*np.sqrt(in_dimension)
             )
         group_split_losses.append(wg_row_l2 + wg_col_l2)
@@ -87,10 +90,10 @@ def split_indicator(splits, dimension, cuda=True):
         torch.Tensor(splits, dimension).normal_(std=0.01),
         requires_grad=True
     )
-    return nn.Softmax()(alpha)
+    return nn.Softmax()(alpha.cuda() if cuda else alpha)
 
 
-def merge_split_indicator(q, supergroups, cuda=True):
+def merge_split_indicator(q, supergroups):
     splits, _ = q.size()
 
     # decide in which supergroup each split belongs to.
@@ -100,7 +103,7 @@ def merge_split_indicator(q, supergroups, cuda=True):
 
     # merge the splits into their according supergroups.
     merged = []
-    for supergroup in range(allocated_supergroups.max() + 1):
+    for supergroup in range(max(allocated_supergroups) + 1):
         merged.append(sum([
             q[subgroup, :] for subgroup in range(splits)
             if allocated_supergroups[subgroup] == supergroup
@@ -112,7 +115,7 @@ def _allocate_supergroups_equally(subgroups, supergroups):
     assert subgroups >= supergroups
     # decide how many subgroups belongs to each supergroup.
     supergroup_elements = [
-        (subgroups + supergroups - i - 1) / supergroups for i in
+        (subgroups + supergroups - i - 1) // supergroups for i in
         range(supergroups)
     ]
     # define the supergroup-to-subgroups allocations.

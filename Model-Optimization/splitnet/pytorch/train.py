@@ -37,8 +37,8 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
             x = Variable(data).cuda() if cuda else Variable(data)
             labels = Variable(labels).cuda() if cuda else Variable(labels)
             scores = model(x)
-            loss = criterion(scores, labels)
-            loss.backward()
+            loss = criterion(scores, labels) + model.split_loss()
+            loss.backward(retain_graph=True)
             optimizer.step()
 
             # update & display statistics.

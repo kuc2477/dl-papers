@@ -15,6 +15,12 @@ parser.add_argument(
 parser.add_argument('--total-block-number', type=int, default=36)
 parser.add_argument('--widen-factor', type=int, default=4)
 parser.add_argument('--split-sizes', type=int, default=[2, 2, 2], nargs='+')
+parser.add_argument(
+    '--baseline-strides', type=int, default=[1, 1, 2, 2], nargs='+'
+)
+parser.add_argument(
+    '--baseline-channels', type=int, default=[16, 16, 32, 64], nargs='+'
+)
 parser.add_argument('--alpha')
 parser.add_argument('--lr', type=float, default=1e-04)
 parser.add_argument('--epochs', type=int, default=10)
@@ -44,6 +50,9 @@ if __name__ == '__main__':
         dataset_config['classes'],
         total_block_number=args.total_block_number,
         widen_factor=args.widen_factor,
+        baseline_strides=args.baseline_strides,
+        baseline_channels=args.baseline_channels,
+        split_sizes=args.split_sizes,
     )
 
     # prepare cuda if needed.
