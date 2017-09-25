@@ -37,23 +37,27 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
             x = Variable(data).cuda() if cuda else Variable(data)
             labels = Variable(labels).cuda() if cuda else Variable(labels)
             scores = model(x)
-            loss = criterion(scores, labels) + model.split_loss()
-            loss.backward(retain_graph=True)
+            cross_entropy_loss = criterion(scores, labels)
+            regularization_loss = model.split_loss()
+            total_loss = cross_entropy_loss + regularization_loss
+            total_loss.backward(retain_graph=True)
             optimizer.step()
 
             # update & display statistics.
-            running_loss += loss.data[0]
+            running_loss += total_loss.data[0]
             data_stream.set_description((
                 'epoch: {epoch}/{epochs} | '
-                'progress: [{trained}/{total}] ({progress:.0f}%) | '
-                'loss: {loss:.4}'
+                'progress: [{trained}/{total}] ({progress:.0f}%) | loss => '
+                'ce {ce_loss:.4} / reg {reg_loss:.6} / total {total_loss:.4}'
             ).format(
                 epoch=epoch,
                 epochs=epochs,
                 trained=batch_index * len(data),
                 total=len(data_loader.dataset),
                 progress=(100. * batch_index / len(data_loader)),
-                loss=(loss.data[0] / len(data))
+                ce_loss=(cross_entropy_loss.data[0] / len(data)),
+                reg_loss=(regularization_loss.data[0] / len(data)),
+                total_loss=(total_loss.data[0] / len(data)),
             ))
 
             if batch_index % checkpoint_interval == 0:

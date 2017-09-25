@@ -102,15 +102,16 @@ class ResidualBlock(WeightRegularized):
         y = self.conv2(self.relu2(self.bn2(y)))
         return y.add_(self.conv_transform(x) if self.need_transform else x)
 
-    def split_loss(self):
+    def split_loss(self, gamma1, gamma2, gamma3):
         weight_and_split_indicators = filter(partial(operator.is_not, None), [
             (self.w1, self.p, self.r),
             (self.w2, self.r, self.q),
             (self.w3, self.p, self.q) if self.need_transform else None
         ])
         return sum([
-            splits.split_loss(w, p, q, cuda=self.is_cuda)
-            if (p is not None and q is not None) else 0
+            splits.split_loss(
+                w, p, q, gamma1, gamma2, gamma3, cuda=self.is_cuda
+            ) if (p is not None and q is not None) else 0
             for w, p, q in weight_and_split_indicators
         ])
 
@@ -163,8 +164,11 @@ class ResidualBlockGroup(WeightRegularized):
     def forward(self, x):
         return reduce(lambda x, f: f(x), self.residual_blocks, x)
 
-    def split_loss(self):
-        return sum([b.split_loss() for b in self.residual_blocks])
+    def split_loss(self, gamma1, gamma2, gamma3):
+        return sum([
+            b.split_loss(gamma1, gamma2, gamma3) for b in
+            self.residual_blocks
+        ])
 
 
 # =======================================
@@ -176,7 +180,10 @@ class WideResNet(WeightRegularized):
                  total_block_number, widen_factor=1,
                  baseline_strides=None,
                  baseline_channels=None,
-                 split_sizes=None):
+                 split_sizes=None,
+                 gamma1=None,
+                 gamma2=None,
+                 gamma3=None):
         super().__init__()
 
         # Model name label.
@@ -191,6 +198,9 @@ class WideResNet(WeightRegularized):
         self.total_block_number = total_block_number
         self.widen_factor = widen_factor
         self.split_sizes = split_sizes or [2, 2, 2]
+        self.gamma1 = gamma1
+        self.gamma2 = gamma2
+        self.gamma3 = gamma3
         self.baseline_strides = baseline_strides or [1, 1, 2, 2]
         self.baseline_channels = baseline_channels or [16, 16, 32, 64]
         self.widened_channels = [
@@ -278,7 +288,10 @@ class WideResNet(WeightRegularized):
         ], x)
 
     def split_loss(self):
-        return sum([g.split_loss() for g in self.residual_block_groups])
+        return sum([
+            g.split_loss(self.gamma1, self.gamma2, self.gamma3) for
+            g in self.residual_block_groups
+        ])
 
     @property
     def name(self):

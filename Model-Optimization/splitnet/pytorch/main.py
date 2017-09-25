@@ -14,14 +14,16 @@ parser.add_argument(
 )
 parser.add_argument('--total-block-number', type=int, default=36)
 parser.add_argument('--widen-factor', type=int, default=4)
-parser.add_argument('--split-sizes', type=int, default=[2, 2, 2], nargs='+')
 parser.add_argument(
     '--baseline-strides', type=int, default=[1, 1, 2, 2], nargs='+'
 )
 parser.add_argument(
     '--baseline-channels', type=int, default=[16, 16, 32, 64], nargs='+'
 )
-parser.add_argument('--alpha')
+parser.add_argument('--split-sizes', type=int, default=[2, 2, 2], nargs='+')
+parser.add_argument('--gamma1', type=float, default=1.)
+parser.add_argument('--gamma2', type=float, default=1.)
+parser.add_argument('--gamma3', type=float, default=10.)
 parser.add_argument('--lr', type=float, default=1e-04)
 parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--batch-size', type=int, default=32)
@@ -53,6 +55,9 @@ if __name__ == '__main__':
         baseline_strides=args.baseline_strides,
         baseline_channels=args.baseline_channels,
         split_sizes=args.split_sizes,
+        gamma1=args.gamma1,
+        gamma2=args.gamma2,
+        gamma3=args.gamma3,
     )
 
     # prepare cuda if needed.
