@@ -61,7 +61,7 @@
 
 ## Model Optimization
 - *SplitNet: Learning to Semantically Split Deep Networks
-for Parameter Reduction and Model Parallelization* [[ICML, 17.07]](http://proceedings.mlr.press/v70/kim17b/kim17b.pdf)
+for Parameter Reduction and Model Parallelization* [[ICML, 17.07]](http://proceedings.mlr.press/v70/kim17b/kim17b.pdf) [[**Pytorch**]](./Model-Optimization/splitnet/pytorch)
 
 
 ## Network Visualization
