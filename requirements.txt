@@ -12,8 +12,10 @@ numpy
 pillow
 
 # utils
+pdbpp
 colorama
 requests
 tqdm
 lmdb
 ipython
+visdom
