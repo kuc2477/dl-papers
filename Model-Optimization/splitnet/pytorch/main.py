@@ -29,6 +29,7 @@ parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--batch-size', type=int, default=32)
 parser.add_argument('--test-size', type=int, default=1000)
 parser.add_argument('--checkpoint-interval', type=int, default=500)
+parser.add_argument('--statistics-interval', type=int, default=30)
 parser.add_argument('--model-dir', type=str, default='models')
 parser.add_argument('--resume', action='store_true')
 parser.add_argument('--no-gpus', action='store_false', dest='cuda')
@@ -80,6 +81,7 @@ if __name__ == '__main__':
             test_size=args.test_size,
             epochs=args.epochs,
             checkpoint_interval=args.checkpoint_interval,
+            statistics_interval=args.statistics_interval,
             resume=args.resume,
             cuda=cuda,
         )

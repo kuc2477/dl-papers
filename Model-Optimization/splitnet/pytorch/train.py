@@ -1,12 +1,14 @@
 from torch import nn, optim
 from torch.autograd import Variable
 from tqdm import tqdm
+import visual
 import utils
 
 
 def train(model, train_dataset, test_dataset=None, model_dir='models',
           lr=1e-04, batch_size=32, test_size=256, epochs=5,
-          checkpoint_interval=500, resume=False, cuda=False):
+          statistics_interval=30, checkpoint_interval=500,
+          resume=False, cuda=False):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
@@ -59,6 +61,24 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                 reg_loss=(regularization_loss.data[0] / len(data)),
                 total_loss=(total_loss.data[0] / len(data)),
             ))
+
+            if batch_index % statistics_interval == 0:
+                # log statistics to the visdom server.
+                scalars = [
+                    cross_entropy_loss.data[0].numpy(),
+                    regularization_loss.data[0].numpy(),
+                    total_loss.data[0].numpy()
+                ]
+                scalar_names = ['cross entropy', 'regularization', 'total']
+                iteration = (
+                    epoch*(len(data_loader.dataset) // batch_size) +
+                    batch_index
+                )
+
+                visual.visualize_scalars(
+                    scalars, scalar_names, iteration, 'losses'
+                )
+
 
             if batch_index % checkpoint_interval == 0:
                 # notify that we've reached to a new checkpoint.
