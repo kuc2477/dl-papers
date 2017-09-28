@@ -20,25 +20,31 @@ def split_loss(w, p, q, gamma1, gamma2, gamma3, cuda=True):
 
     # 1. Overlap loss.
     p_overlap_loss = sum([
-        torch.sum(p[i, :] * p[j, :])
+        (p[i, :] * p[j, :]).sum()
         for j in range(splits)
         for i in range(splits)
         if i > j
     ]) / ((p_dimension * (splits-1)) / (2*splits))
 
     q_overlap_loss = sum([
-        torch.sum(q[i, :] * q[j, :])
+        (q[i, :] * q[j, :]).sum()
         for j in range(splits)
         for i in range(splits)
         if i > j
     ]) / ((q_dimension * (splits-1)) / (2*splits))
 
-    overlap_loss = p_overlap_loss + q_overlap_loss
+    overlap_loss = (p_overlap_loss + q_overlap_loss) / 2
 
     # 2. Uniform loss.
-    p_uniform_loss = sum([p[i, :].sum()**2 for i in range(splits)])
-    q_uniform_loss = sum([q[i, :].sum()**2 for i in range(splits)])
-    uniform_loss = p_uniform_loss + q_uniform_loss
+    p_uniform_loss = sum([
+        p[i, :].sum()**2 for i in range(splits)
+    ]) / (p_dimension**2 / splits)
+
+    q_uniform_loss = sum([
+        q[i, :].sum()**2 for i in range(splits)
+    ]) / (q_dimension**2 / splits)
+
+    uniform_loss = (p_uniform_loss + q_uniform_loss) / 2
 
     # 3. Split loss.
     is_tensor = len(w.size()) == 4
@@ -50,7 +56,7 @@ def split_loss(w, p, q, gamma1, gamma2, gamma3, cuda=True):
 
     if is_tensor:
         w_norm = (w**2).mean(-1).mean(-1)
-        stddev = np.sqrt(1./w.size()[2]**2/in_dimension)
+        stddev = np.sqrt(1./w.size()[-1]**2/in_dimension)
     else:
         w_norm = w
         stddev = np.sqrt(1./in_dimension)
@@ -69,17 +75,17 @@ def split_loss(w, p, q, gamma1, gamma2, gamma3, cuda=True):
             )
         else:
             wg_row = (w_norm.t() * q[i, :]).t() * (ones_col-p[i, :])
-            wg_row_l2 = (wg_row**2).sum(dim=0) / (
+            wg_row_l2 = (wg_row**2).sum(dim=0).sqrt().sum() / (
                 in_dimension*np.sqrt(out_dimension)
             )
             wg_col = (w_norm.t() * (ones_row-q[i, :])).t() * p[i, :]
-            wg_col_l2 = (wg_col**2).sum(dim=1) / (
+            wg_col_l2 = (wg_col**2).sum(dim=1).sqrt().sum() / (
                 out_dimension*np.sqrt(in_dimension)
             )
         group_split_losses.append(wg_row_l2 + wg_col_l2)
 
     # 3-2. Normalize the total split loss.
-    split_loss = sum(group_split_losses) / (2*(splits-1)*stddev / splits)
+    split_loss = sum(group_split_losses) / (2*(splits-1)*stddev/splits)
 
     # Return the total regularization loss.
     return (

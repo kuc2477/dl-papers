@@ -43,10 +43,10 @@ class RegularizedLinear(WeightRegularized):
     def forward(self, x):
         return self.linear(x)
 
-    def split_loss(self):
+    def split_loss(self, gamma1, gamma2, gamma3):
         return splits.split_loss(
             self.linear.weight, self.p, self.q,
-            cuda=self.is_cuda
+            gamma1, gamma2, gamma3, cuda=self.is_cuda
         )
 
 
@@ -108,12 +108,32 @@ class ResidualBlock(WeightRegularized):
             (self.w2, self.r, self.q),
             (self.w3, self.p, self.q) if self.need_transform else None
         ])
-        return sum([
+
+        losses = ([
             splits.split_loss(
                 w, p, q, gamma1, gamma2, gamma3, cuda=self.is_cuda
-            ) if (p is not None and q is not None) else 0
-            for w, p, q in weight_and_split_indicators
+            ) for w, p, q in weight_and_split_indicators if
+            (p is not None and q is not None)
         ])
+
+        return sum(losses) / len(losses)
+
+
+class ResidualBlockSplitBottleneck(ResidualBlock):
+    """ResidualBlock with split bottleneck"""
+    def __init__(self, in_channels, out_channels, stride,
+                 split_size=None, split_q=None):
+        super().__init__(in_channels, out_channels, stride)
+
+        # split indicators
+        if split_size:
+            self.p = split_q
+            self.r = splits.split_indicator(split_size, out_channels)
+            self.q = split_q
+        else:
+            self.p = None
+            self.r = None
+            self.q = None
 
 
 class ResidualBlockGroup(WeightRegularized):
@@ -138,6 +158,7 @@ class ResidualBlockGroup(WeightRegularized):
         for i in reversed(range(self.block_number)):
             is_first = (i == 0)
             is_last = (i == self.block_number - 1)
+            is_split_bottleneck = (i % 2 == 1)
 
             if self.splitted:
                 # Deep Split & Hierarchical Grouping.
@@ -150,7 +171,11 @@ class ResidualBlockGroup(WeightRegularized):
             else:
                 q = None
 
-            block = ResidualBlock(
+            block_class = (
+                ResidualBlockSplitBottleneck if is_split_bottleneck else
+                ResidualBlock
+            )
+            block = block_class(
                 self.in_channels if is_first else self.out_channels,
                 self.out_channels,
                 self.stride if is_first else 1,
@@ -165,10 +190,12 @@ class ResidualBlockGroup(WeightRegularized):
         return reduce(lambda x, f: f(x), self.residual_blocks, x)
 
     def split_loss(self, gamma1, gamma2, gamma3):
-        return sum([
+        losses = [
             b.split_loss(gamma1, gamma2, gamma3) for b in
             self.residual_blocks
-        ])
+        ]
+
+        return sum(losses) / len(losses)
 
 
 # =======================================
@@ -180,10 +207,7 @@ class WideResNet(WeightRegularized):
                  total_block_number, widen_factor=1,
                  baseline_strides=None,
                  baseline_channels=None,
-                 split_sizes=None,
-                 gamma1=None,
-                 gamma2=None,
-                 gamma3=None):
+                 split_sizes=None):
         super().__init__()
 
         # Model name label.
@@ -198,9 +222,6 @@ class WideResNet(WeightRegularized):
         self.total_block_number = total_block_number
         self.widen_factor = widen_factor
         self.split_sizes = split_sizes or [2, 2, 2]
-        self.gamma1 = gamma1
-        self.gamma2 = gamma2
-        self.gamma3 = gamma3
         self.baseline_strides = baseline_strides or [1, 1, 2, 2]
         self.baseline_channels = baseline_channels or [16, 16, 32, 64]
         self.widened_channels = [
@@ -287,17 +308,18 @@ class WideResNet(WeightRegularized):
             self.fc
         ], x)
 
-    def split_loss(self):
-        return sum([
-            g.split_loss(self.gamma1, self.gamma2, self.gamma3) for
-            g in self.residual_block_groups
-        ])
+    def split_loss(self, gamma1, gamma2, gamma3):
+        losses = [self.fc.split_loss(gamma1, gamma2, gamma3), *[
+            g.split_loss(gamma1, gamma2, gamma3) for
+            g in self.residual_block_groups if g.splitted
+        ]]
+        return sum(losses) / len(losses)
 
     @property
     def name(self):
         # Label for the split group configurations.
         if self.split_sizes:
-            split_label = 'split({})-'.format('-'.join(
+            split_label = 'split[{}]-'.format('-'.join(
                 str(s) for s in self.split_sizes
             ))
         else:
@@ -305,7 +327,7 @@ class WideResNet(WeightRegularized):
 
         # Name of the model.
         return (
-            'WRN-{split_label}{depth}-{widen_factor}-'
+            'WRN-{depth}-{widen_factor}-{split_label}'
             '{label}-{size}x{size}x{channels}'
         ).format(
             split_label=split_label,
