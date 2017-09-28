@@ -4,6 +4,7 @@ from torch.autograd import Variable
 from tqdm import tqdm
 import visual
 import utils
+import splits
 
 
 def train(model, train_dataset, test_dataset=None, model_dir='models',
@@ -102,25 +103,62 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                     'total loss', iteration, env=model.name
                 )
 
-            # Send weights to the visdom server.
             if iteration % weight_log_interval == 0:
+                # Send visualized weights to the visdom server.
                 weights = [
-                    w.data if w is not None else None for
+                    (w.data, p, q) for
                     g in model.residual_block_groups for
                     b in g.residual_blocks for
-                    w in (b.w1, b.w2, b.w3)
-                ] + [model.fc.linear.weight.data]
+                    w, p, q in (
+                        (b.w1, b.p, b.r),
+                        (b.w2, b.r, b.q),
+                        (b.w3, b.p, b.q),
+                    ) if w is not None
+                ] + [(
+                    model.fc.linear.weight.data,
+                    model.fc.p,
+                    model.fc.q
+                )]
 
-                weight_names = [
+                names = [
                     'g{i}-b{j}-w{k}'.format(i=i+1, j=j+1, k=k+1) for
                     i, g in enumerate(model.residual_block_groups) for
                     j, b in enumerate(g.residual_blocks) for
-                    k, w in enumerate((b.w1, b.w2, b.w3))
+                    k, w in enumerate((b.w1, b.w2, b.w3)) if w is not None
                 ] + ['fc-w']
 
-                for weight, name in zip(weights, weight_names):
+                for (w, p, q), name in zip(weights, names):
                     visual.visualize_kernel(
-                        weight, name,
+                        splits.block_diagonalize_kernel(w, p, q), name,
+                        'epoch{}-{}'.format(epoch, batch_index+1),
+                        env=model.name
+                    )
+
+                # Send visualized split indicators to the visdom server.
+                indicators = [
+                    q.data for
+                    i, g in enumerate(model.residual_block_groups) for
+                    j, b in enumerate(g.residual_blocks) for
+                    k, q in enumerate((b.p, b.r, b.q)) if q is not None
+                ] + [model.fc.p.data, model.fc.q.data]
+
+                names = [
+                    'g{i}-b{j}-{indicator}'
+                    .format(i=i+1, j=j+1, indicator=ind) for
+                    i, g in enumerate(model.residual_block_groups) for
+                    j, b in enumerate(g.residual_blocks) for
+                    ind, q in zip(('p', 'r', 'q'), (b.p, b.r, b.q)) if
+                    q is not None
+                ] + ['fc-p', 'fc-q']
+
+                for q, name in zip(indicators, names):
+                    q_diagonalized = splits.block_diagonalize_indacator(q)
+                    q_diagonalized_expanded = q_diagonalized\
+                        .view(*q.size(), 1)\
+                        .repeat(1, 20, 1)\
+                        .view(-1, q.size()[1])
+                    visual.visualize_kernel(
+                        q_diagonalized_expanded, name,
                         'epoch{}-{}'.format(epoch, batch_index+1),
                         env=model.name
                     )

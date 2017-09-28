@@ -8,6 +8,8 @@ prettytensor
 
 # data
 scipy
+scikit-learn
+scikit-image
 numpy
 pillow
 

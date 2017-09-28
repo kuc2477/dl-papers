@@ -5,18 +5,10 @@ from torch.autograd import Variable
 
 
 def reg_loss(w, p, q, cuda=True):
+    _assert_compatibility(w, p, q)
     splits, p_dimension = p.size()
-    splits_, q_dimension = q.size()
+    splits, q_dimension = q.size()
     out_dimension, in_dimension = w.size()[:2]
-
-    # Validate shape of the weight and split indicators.
-    assert len(w.size()) in (2, 4)
-    assert splits == splits_
-    assert splits > 1
-    assert p_dimension == in_dimension
-    assert q_dimension == out_dimension
-    assert len(p.size()) == 2
-    assert len(q.size()) == 2
 
     # 1. Overlap loss.
     p_overlap_loss = sum([
@@ -56,7 +48,7 @@ def reg_loss(w, p, q, cuda=True):
 
     if is_tensor:
         w_norm = (w**2).mean(-1).mean(-1)
-        stddev = np.sqrt(1./w.size()[-1]**2/in_dimension)
+        stddev = np.sqrt(1./(w.size()[-1]**2)/in_dimension)
     else:
         w_norm = w
         stddev = np.sqrt(1./in_dimension)
@@ -92,11 +84,12 @@ def reg_loss(w, p, q, cuda=True):
 
 
 def split_indicator(splits, dimension, cuda=True):
+    softmax = nn.Softmax()
     alpha = Variable(
         torch.Tensor(splits, dimension).normal_(std=0.01),
         requires_grad=True
     )
-    return nn.Softmax()(alpha.cuda() if cuda else alpha)
+    return softmax((alpha.cuda() if cuda else alpha).t()).t()
 
 
 def merge_split_indicator(q, supergroups):
@@ -115,6 +108,48 @@ def merge_split_indicator(q, supergroups):
             if allocated_supergroups[subgroup] == supergroup
         ]))
     return torch.stack(merged)
+
+
+def block_diagonalize_kernel(w, p, q):
+    # do not diagonalize the kernel if either of p or q is None.
+    assert (p is None) == (q is None)
+    if p is None and q is None:
+        return w
+    # block diagnoalize the kernel if w, p, and q are compatible each other.
+    _assert_compatibility(w, p, q)
+    is_tensor = len(w.size()) == 4
+    return (
+        w[diagonalizer(q), :, :, :][:, diagonalizer(p), :, :] if is_tensor else
+        w[diagonalizer(q), :][:, diagonalizer(p)]
+    )
+
+
+def block_diagonalize_indacator(p):
+    return p[:, diagonalizer(p)]
+
+
+def diagonalizer(q):
+    _, q_group_allocations = q.max(0)
+    _, q_diagonalizer = q_group_allocations.sort()
+    return (
+        q_diagonalizer.data if isinstance(q_diagonalizer, Variable) else
+        q_diagonalizer
+    )
+
+
+def _assert_compatibility(w, p, q):
+    splits, p_dimension = p.size()
+    splits_, q_dimension = q.size()
+    out_dimension, in_dimension = w.size()[:2]
+
+    # Validate shape of the weight and split indicators.
+    assert len(w.size()) in (2, 4)
+    assert splits == splits_
+    assert splits > 1
+    assert p_dimension == in_dimension
+    assert q_dimension == out_dimension
+    assert len(p.size()) == 2
+    assert len(q.size()) == 2
 
 
 def _allocate_supergroups_equally(subgroups, supergroups):

@@ -1,6 +1,7 @@
 import numpy as np
 from torch.cuda import FloatTensor as CUDATensor
 from visdom import Visdom
+import skimage
 
 
 _WINDOW_CASH = {}
@@ -32,12 +33,17 @@ def visualize_kernel(kernel, name, label=None, env='main'):
     kernel_norm = kernel if len(kernel.size()) == 2 else (
         (kernel**2).mean(-1).mean(-1)
     )
-    kernel_normalized = (
+
+    visualized = (
         (kernel_norm - kernel_norm.min()) /
         (kernel_norm.max() - kernel_norm.min())
-    ) * 255
+    )
+
     title = name + ('-{}'.format(label) if label is not None else '')
-    _vis(env).image(kernel_normalized.numpy(), opts=dict(title=title))
+    _vis(env).image(
+        skimage.img_as_float(visualized.numpy()),
+        opts=dict(title=title)
+    )
 
 
 def visualize_scalar(scalar, name, iteration, env='main'):
