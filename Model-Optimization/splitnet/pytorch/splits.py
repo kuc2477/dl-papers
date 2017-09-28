@@ -4,7 +4,7 @@ from torch import nn
 from torch.autograd import Variable
 
 
-def split_loss(w, p, q, gamma1, gamma2, gamma3, cuda=True):
+def reg_loss(w, p, q, cuda=True):
     splits, p_dimension = p.size()
     splits_, q_dimension = q.size()
     out_dimension, in_dimension = w.size()[:2]
@@ -88,11 +88,7 @@ def split_loss(w, p, q, gamma1, gamma2, gamma3, cuda=True):
     split_loss = sum(group_split_losses) / (2*(splits-1)*stddev/splits)
 
     # Return the total regularization loss.
-    return (
-        overlap_loss * gamma1 +
-        uniform_loss * gamma2 +
-        split_loss * gamma3
-    )
+    return overlap_loss, uniform_loss, split_loss
 
 
 def split_indicator(splits, dimension, cuda=True):

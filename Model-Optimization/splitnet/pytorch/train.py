@@ -62,8 +62,8 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
 
             # update the network.
             cross_entropy_loss = criterion(scores, labels)
-            split_loss = model.split_loss(gamma1, gamma2, gamma3)
-            total_loss = cross_entropy_loss + split_loss
+            reg_loss = model.reg_loss(gamma1, gamma2, gamma3)
+            total_loss = cross_entropy_loss + reg_loss
             total_loss.backward(retain_graph=True)
             optimizer.step()
 
@@ -73,7 +73,7 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                 'iteration: {iteration} | '
                 'progress: [{trained}/{total}] ({progress:.0f}%) | '
                 'loss => '
-                'ce: {ce_loss:.4} / split: {split_loss:.5} / '
+                'ce: {ce_loss:.4} / reg: {reg_loss:.5} / '
                 'total: {total_loss:.4}'
             ).format(
                 epoch=epoch,
@@ -83,7 +83,7 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                 total=dataset_size,
                 progress=(100.*(batch_index+1)/dataset_batches),
                 ce_loss=(cross_entropy_loss.data[0] / data_size),
-                split_loss=(split_loss.data[0] / data_size),
+                reg_loss=(reg_loss.data[0] / data_size),
                 total_loss=(total_loss.data[0] / data_size),
             ))
 
@@ -94,8 +94,8 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                     'cross entropy loss', iteration, env=model.name
                 )
                 visual.visualize_scalar(
-                    split_loss.data / data_size,
-                    'split loss', iteration, env=model.name
+                    reg_loss.data / data_size,
+                    'regulaization loss', iteration, env=model.name
                 )
                 visual.visualize_scalar(
                     total_loss.data / data_size,

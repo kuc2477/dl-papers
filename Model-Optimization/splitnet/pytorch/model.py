@@ -1,3 +1,4 @@
+import itertools
 import copy
 import operator
 from functools import reduce, partial
@@ -10,7 +11,7 @@ import splits
 # =====================================
 
 class WeightRegularized(nn.Module):
-    def split_loss(self):
+    def reg_losses(self):
         raise NotImplementedError
 
     @property
@@ -43,11 +44,10 @@ class RegularizedLinear(WeightRegularized):
     def forward(self, x):
         return self.linear(x)
 
-    def split_loss(self, gamma1, gamma2, gamma3):
-        return splits.split_loss(
-            self.linear.weight, self.p, self.q,
-            gamma1, gamma2, gamma3, cuda=self.is_cuda
-        )
+    def reg_losses(self):
+        return [splits.reg_loss(
+            self.linear.weight, self.p, self.q, cuda=self.is_cuda
+        )]
 
 
 class ResidualBlock(WeightRegularized):
@@ -102,21 +102,17 @@ class ResidualBlock(WeightRegularized):
         y = self.conv2(self.relu2(self.bn2(y)))
         return y.add_(self.conv_transform(x) if self.need_transform else x)
 
-    def split_loss(self, gamma1, gamma2, gamma3):
+    def reg_losses(self):
         weight_and_split_indicators = filter(partial(operator.is_not, None), [
             (self.w1, self.p, self.r),
             (self.w2, self.r, self.q),
             (self.w3, self.p, self.q) if self.need_transform else None
         ])
 
-        losses = ([
-            splits.split_loss(
-                w, p, q, gamma1, gamma2, gamma3, cuda=self.is_cuda
-            ) for w, p, q in weight_and_split_indicators if
-            (p is not None and q is not None)
-        ])
-
-        return sum(losses) / len(losses)
+        return [
+            splits.reg_loss(w, p, q, cuda=self.is_cuda) for w, p, q in
+            weight_and_split_indicators if (p is not None and q is not None)
+        ]
 
 
 class ResidualBlockSplitBottleneck(ResidualBlock):
@@ -189,13 +185,10 @@ class ResidualBlockGroup(WeightRegularized):
     def forward(self, x):
         return reduce(lambda x, f: f(x), self.residual_blocks, x)
 
-    def split_loss(self, gamma1, gamma2, gamma3):
-        losses = [
-            b.split_loss(gamma1, gamma2, gamma3) for b in
-            self.residual_blocks
-        ]
-
-        return sum(losses) / len(losses)
+    def reg_losses(self):
+        return itertools.chain(*[
+            b.reg_losses() for b in self.residual_blocks
+        ])
 
 
 # =======================================
@@ -308,12 +301,22 @@ class WideResNet(WeightRegularized):
             self.fc
         ], x)
 
-    def split_loss(self, gamma1, gamma2, gamma3):
-        losses = [self.fc.split_loss(gamma1, gamma2, gamma3), *[
-            g.split_loss(gamma1, gamma2, gamma3) for
+    def reg_losses(self):
+        return itertools.chain(self.fc.reg_losses(), *[
+            g.reg_losses() for
             g in self.residual_block_groups if g.splitted
-        ]]
-        return sum(losses) / len(losses)
+        ])
+
+    def reg_loss(self, gamma1, gamma2, gamma3):
+        reg_losses = self.reg_losses()
+        overlap_losses, uniform_losses, split_losses = tuple(zip(*reg_losses))
+        split_loss_weights = [l.detach() for l in split_losses]
+        split_losses_weighted = [l.detach() * l for l in split_losses]
+        return (
+            sum(overlap_losses) / len(overlap_losses) * gamma1 +
+            sum(uniform_losses) / len(uniform_losses) * gamma2 +
+            sum(split_losses_weighted) / sum(split_loss_weights) * gamma3
+        )
 
     @property
     def name(self):
