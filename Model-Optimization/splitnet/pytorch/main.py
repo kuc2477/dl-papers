@@ -13,7 +13,7 @@ parser.add_argument(
     choices=list(TRAIN_DATASETS.keys())
 )
 parser.add_argument('--total-block-number', type=int, default=36)
-parser.add_argument('--widen-factor', type=int, default=4)
+parser.add_argument('--widen-factor', type=int, default=8)
 parser.add_argument(
     '--baseline-strides', type=int, default=[1, 1, 2, 2], nargs='+'
 )

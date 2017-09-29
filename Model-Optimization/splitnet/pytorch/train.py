@@ -63,7 +63,12 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
 
             # update the network.
             cross_entropy_loss = criterion(scores, labels)
-            reg_loss = model.reg_loss(gamma1, gamma2, gamma3)
+            overlap_loss, uniform_loss, split_loss = model.reg_loss()
+            reg_loss = (
+                overlap_loss * gamma1 +
+                uniform_loss * gamma2 +
+                split_loss * gamma3
+            )
             total_loss = cross_entropy_loss + reg_loss
             total_loss.backward(retain_graph=True)
             optimizer.step()
@@ -90,17 +95,27 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
 
             # Send losses to the visdom server.
             if iteration % loss_log_interval == 0:
-                visual.visualize_scalar(
-                    cross_entropy_loss.data / data_size,
-                    'cross entropy loss', iteration, env=model.name
-                )
-                visual.visualize_scalar(
+                reg_losses_and_names = ([
+                    overlap_loss.data * gamma1 / data_size,
+                    uniform_loss.data * gamma2 / data_size,
+                    split_loss.data * gamma3 / data_size,
                     reg_loss.data / data_size,
+                ], ['overlap', 'uniform', 'split', 'total'])
+
+                visual.visualize_scalars(
+                    *reg_losses_and_names,
                     'regulaization loss', iteration, env=model.name
                 )
-                visual.visualize_scalar(
+
+                model_losses_and_names = ([
+                    cross_entropy_loss.data / data_size,
+                    reg_loss.data / data_size,
                     total_loss.data / data_size,
-                    'total loss', iteration, env=model.name
+                ], ['cross entropy', 'regularization', 'total'])
+
+                visual.visualize_scalars(
+                    *model_losses_and_names,
+                    'model loss', iteration, env=model.name
                 )
 
             if iteration % weight_log_interval == 0:

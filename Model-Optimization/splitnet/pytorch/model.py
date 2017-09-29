@@ -307,15 +307,15 @@ class WideResNet(WeightRegularized):
             g in self.residual_block_groups if g.splitted
         ])
 
-    def reg_loss(self, gamma1, gamma2, gamma3):
+    def reg_loss(self):
         reg_losses = self.reg_losses()
         overlap_losses, uniform_losses, split_losses = tuple(zip(*reg_losses))
         split_loss_weights = [l.detach() for l in split_losses]
         split_losses_weighted = [l.detach() * l for l in split_losses]
         return (
-            sum(overlap_losses) / len(overlap_losses) * gamma1 +
-            sum(uniform_losses) / len(uniform_losses) * gamma2 +
-            sum(split_losses_weighted) / sum(split_loss_weights) * gamma3
+            sum(overlap_losses) / len(overlap_losses),
+            sum(uniform_losses) / len(uniform_losses),
+            sum(split_losses_weighted) / sum(split_loss_weights),
         )
 
     @property
@@ -334,7 +334,7 @@ class WideResNet(WeightRegularized):
             '{label}-{size}x{size}x{channels}'
         ).format(
             split_label=split_label,
-            depth=(self.total_block_number+4),
+            depth=(self.total_block_number*2+4),
             widen_factor=self.widen_factor,
             label=self.label,
             size=self.input_size,

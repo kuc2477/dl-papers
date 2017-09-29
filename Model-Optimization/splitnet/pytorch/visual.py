@@ -49,16 +49,18 @@ def visualize_kernel(kernel, name, label=None, env='main'):
 def visualize_scalar(scalar, name, iteration, env='main'):
     visualize_scalars(
         [scalar] if isinstance(scalar, float) or len(scalar) == 1 else scalar,
-        [name], iteration, name, env=env
+        [name], name, iteration, env=env
     )
 
 
-def visualize_scalars(scalars, names, iteration, title, env='main'):
+def visualize_scalars(scalars, names, title, iteration, env='main'):
     assert len(scalars) == len(names)
 
     # Convert scalar tensors to numpy arrays.
     scalars = [s.cpu() if isinstance(s, CUDATensor) else s for s in scalars]
     scalars = [s.numpy() for s in scalars]
+    multi = len(scalars) > 1
+    num = len(scalars)
 
     options = dict(
         fillarea=True,
@@ -74,8 +76,11 @@ def visualize_scalars(scalars, names, iteration, title, env='main'):
         margintop=30,
     )
 
-    X = np.array([iteration] * len(scalars))
-    Y = np.column_stack(scalars) if len(scalars) > 1 else scalars[0]
+    X = (
+        np.column_stack(np.array([iteration] * num)) if multi else
+        np.array([iteration] * num)
+    )
+    Y = np.column_stack(scalars) if multi else scalars[0]
 
     if title in _WINDOW_CASH:
         _vis(env).updateTrace(X=X, Y=Y, win=_WINDOW_CASH[title])
