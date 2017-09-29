@@ -10,7 +10,7 @@ def reg_loss(w, p, q, cuda=True):
     splits, q_dimension = q.size()
     out_dimension, in_dimension = w.size()[:2]
 
-    # 1. Overlap loss.
+    # 1. Overlap Loss (3.2.2. Disjoint Group Assignment)
     p_overlap_loss = sum([
         (p[i, :] * p[j, :]).sum()
         for j in range(splits)
@@ -27,7 +27,7 @@ def reg_loss(w, p, q, cuda=True):
 
     overlap_loss = (p_overlap_loss + q_overlap_loss) / 2
 
-    # 2. Uniform loss.
+    # 2. Uniform Loss (3.2.3. Balanced Group Assignment)
     p_uniform_loss = sum([
         p[i, :].sum()**2 for i in range(splits)
     ]) / (p_dimension**2 / splits)
@@ -38,7 +38,7 @@ def reg_loss(w, p, q, cuda=True):
 
     uniform_loss = (p_uniform_loss + q_uniform_loss) / 2
 
-    # 3. Split loss.
+    # 3. Split Loss (3.2.1. Group Weight Regularization)
     is_tensor = len(w.size()) == 4
     ones_col = Variable(torch.ones((in_dimension,)))
     ones_row = Variable(torch.ones((out_dimension,)))

@@ -11,39 +11,76 @@ def _vis(env='main'):
     return Visdom(env=env)
 
 
-def visualize_image(tensor, name, label=None, env='main'):
+def visualize_image(tensor, name, label=None, env='main', w=250, h=250,
+                    update_window_without_label=False):
     tensor = tensor.cpu() if isinstance(tensor, CUDATensor) else tensor
     title = name + ('-{}'.format(label) if label is not None else '')
-    _vis(env).image(tensor.numpy(), title=title)
+
+    _WINDOW_CASH[title] = _vis(env).image(
+        tensor.numpy(), win=_WINDOW_CASH.get(title),
+        opts=dict(title=title, width=w, height=h)
+    )
+
+    # This is useful when you want to maintain the most recent images.
+    if update_window_without_label:
+        _WINDOW_CASH[name] = _vis(env).image(
+            tensor.numpy(), win=_WINDOW_CASH.get(name),
+            opts=dict(title=name, width=w, height=h)
+        )
 
 
-def visualize_images(tensor, name, label=None, env='main'):
+def visualize_images(tensor, name, label=None, env='main', w=250, h=250,
+                     update_window_without_label=False):
     tensor = tensor.cpu() if isinstance(tensor, CUDATensor) else tensor
     title = name + ('-{}'.format(label) if label is not None else '')
-    _vis(env).images(tensor.numpy(), opts=dict(title=title))
+
+    _WINDOW_CASH[title] = _vis(env).images(
+        tensor.numpy(), win=_WINDOW_CASH.get(title),
+        opts=dict(title=title, width=w, height=h)
+    )
+
+    # This is useful when you want to maintain the most recent images.
+    if update_window_without_label:
+        _WINDOW_CASH[name] = _vis(env).images(
+            tensor.numpy(), win=_WINDOW_CASH.get(name),
+            opts=dict(title=name, width=w, height=h)
+        )
 
 
-def visualize_kernel(kernel, name, label=None, env='main'):
+def visualize_kernel(kernel, name, label=None, env='main', w=250, h=250,
+                     update_window_without_label=False, compress_tensor=False):
     # Do not visualize kernels that does not exists.
     if kernel is None:
         return
 
     assert len(kernel.size()) in (2, 4)
+    title = name + ('-{}'.format(label) if label is not None else '')
     kernel = kernel.cpu() if isinstance(kernel, CUDATensor) else kernel
     kernel_norm = kernel if len(kernel.size()) == 2 else (
-        (kernel**2).mean(-1).mean(-1)
+        (kernel**2).mean(-1).mean(-1) if compress_tensor else
+        kernel.view(
+            kernel.size()[0] * kernel.size()[2],
+            kernel.size()[1] * kernel.size()[3],
+        )
     )
+    kernel_norm = kernel_norm.abs()
 
-    visualized = (
+    visualized = skimage.img_as_float((
         (kernel_norm - kernel_norm.min()) /
         (kernel_norm.max() - kernel_norm.min())
+    ).numpy())
+
+    _WINDOW_CASH[title] = _vis(env).image(
+        visualized, win=_WINDOW_CASH.get(title),
+        opts=dict(title=title, width=w, height=h)
     )
 
-    title = name + ('-{}'.format(label) if label is not None else '')
-    _vis(env).image(
-        skimage.img_as_float(visualized.numpy()),
-        opts=dict(title=title)
-    )
+    # This is useful when you want to maintain the most recent images.
+    if update_window_without_label:
+        _WINDOW_CASH[name] = _vis(env).image(
+            visualized, win=_WINDOW_CASH.get(name),
+            opts=dict(title=name, width=w, height=h)
+        )
 
 
 def visualize_scalar(scalar, name, iteration, env='main'):

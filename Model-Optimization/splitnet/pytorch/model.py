@@ -225,8 +225,8 @@ class WideResNet(WeightRegularized):
 
         # Validate hyperparameters.
         if self.split_sizes is not None:
-            assert len(self.split_sizes) <= len(self.baseline_channels) - 1
-            assert len(self.split_sizes) <= len(self.baseline_strides) - 1
+            assert len(self.split_sizes) <= len(self.baseline_channels)
+            assert len(self.split_sizes) <= len(self.baseline_strides)
         assert len(self.baseline_channels) == len(self.baseline_strides)
         assert (
             self.total_block_number % (2*self.group_number) == 0 and
@@ -294,9 +294,9 @@ class WideResNet(WeightRegularized):
         return reduce(lambda x, f: f(x), [
             self.conv,
             *self.residual_block_groups,
-            self.pool,
             self.bn,
             self.relu,
+            self.pool,
             (lambda x: x.view(-1, self.widened_channels[-1])),
             self.fc
         ], x)
@@ -328,13 +328,20 @@ class WideResNet(WeightRegularized):
         else:
             split_label = ''
 
+        # First block of a residual group contains 3 conv layers and rest
+        # blocks of the group contains 2 conv layers.
+        depth = self.group_number*3 + (
+            self.total_block_number -
+            self.group_number
+        )*2 + 1
+
         # Name of the model.
         return (
             'WRN-{depth}-{widen_factor}-{split_label}'
             '{label}-{size}x{size}x{channels}'
         ).format(
             split_label=split_label,
-            depth=(self.total_block_number*2+4),
+            depth=depth,
             widen_factor=self.widen_factor,
             label=self.label,
             size=self.input_size,

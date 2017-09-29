@@ -9,10 +9,10 @@ import utils
 
 parser = ArgumentParser('WRN torch implementation')
 parser.add_argument(
-    '--dataset', default='cifar10', type=str,
+    '--dataset', default='cifar100', type=str,
     choices=list(TRAIN_DATASETS.keys())
 )
-parser.add_argument('--total-block-number', type=int, default=36)
+parser.add_argument('--total-block-number', type=int, default=6)
 parser.add_argument('--widen-factor', type=int, default=8)
 parser.add_argument(
     '--baseline-strides', type=int, default=[1, 1, 2, 2], nargs='+'
@@ -27,20 +27,24 @@ parser.add_argument('--gamma3', type=float, default=10.)
 parser.add_argument('--weight-decay', type=float, default=1e-04)
 parser.add_argument('--lr', type=float, default=1e-04)
 parser.add_argument('--lr-decay', type=float, default=.1)
-parser.add_argument('--lr-decay-epochs', type=int, default=[80, 120, 160],
+parser.add_argument('--lr-decay-epochs', type=int, default=[30, 50, 120],
                     nargs='+')
-parser.add_argument('--epochs', type=int, default=10)
-parser.add_argument('--batch-size', type=int, default=32)
+parser.add_argument('--epochs', type=int, default=100)
+parser.add_argument('--batch-size', type=int, default=64)
 parser.add_argument('--test-size', type=int, default=1000)
+parser.add_argument('--eval-log-interval', type=int, default=30)
 parser.add_argument('--loss-log-interval', type=int, default=30)
 parser.add_argument('--weight-log-interval', type=int, default=500)
 parser.add_argument('--checkpoint-interval', type=int, default=500)
 parser.add_argument('--model-dir', type=str, default='models')
-parser.add_argument('--resume', action='store_true')
+resume_command = parser.add_mutually_exclusive_group()
+resume_command.add_argument('--resume-best', action='store_true')
+resume_command.add_argument('--resume-latest', action='store_true')
+parser.add_argument('--best', action='store_true')
 parser.add_argument('--no-gpus', action='store_false', dest='cuda')
-command = parser.add_mutually_exclusive_group(required=True)
-command.add_argument('--test', action='store_true', dest='test')
-command.add_argument('--train', action='store_false', dest='test')
+main_command = parser.add_mutually_exclusive_group(required=True)
+main_command.add_argument('--test', action='store_true', dest='test')
+main_command.add_argument('--train', action='store_false', dest='test')
 
 
 if __name__ == '__main__':
@@ -89,8 +93,10 @@ if __name__ == '__main__':
             test_size=args.test_size,
             epochs=args.epochs,
             checkpoint_interval=args.checkpoint_interval,
+            eval_log_interval=args.eval_log_interval,
             loss_log_interval=args.loss_log_interval,
             weight_log_interval=args.weight_log_interval,
-            resume=args.resume,
+            resume_best=args.resume_best,
+            resume_latest=args.resume_latest,
             cuda=cuda,
         )
