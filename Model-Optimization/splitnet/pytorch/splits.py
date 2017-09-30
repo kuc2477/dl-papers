@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from torch.nn import Parameter
 from torch import nn
 from torch.autograd import Variable
 
@@ -83,9 +84,10 @@ def reg_loss(w, p, q, cuda=True):
     return overlap_loss, uniform_loss, split_loss
 
 
-def alpha(splits, dimension, std=0.01, cuda=True):
+def alpha(splits, dimension, std=0.01, cuda=True, as_parameter=True):
+    cls = Parameter if as_parameter else Variable
     alpha = torch.Tensor(splits, dimension).normal_(std=std)
-    return Variable(
+    return cls(
         alpha.cuda() if cuda else alpha,
         requires_grad=True
     )
