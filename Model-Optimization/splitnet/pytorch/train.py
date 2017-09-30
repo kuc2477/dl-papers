@@ -162,15 +162,15 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                     i, g in enumerate(model.residual_block_groups) for
                     b in g.residual_blocks for
                     w, p, q in (
-                        (b.w1, b.p, b.r),
-                        (b.w2, b.r, b.q),
-                        (b.w3, b.p, b.q),
+                        (b.w1, b.p(), b.r()),
+                        (b.w2, b.r(), b.q()),
+                        (b.w3, b.p(), b.q()),
                     ) if i+1 > (len(model.residual_block_groups) -
                                 (len(model.split_sizes)-1)) and w is not None
                 ] + [(
                     model.fc.linear.weight.data,
-                    model.fc.p,
-                    model.fc.q
+                    model.fc.p(),
+                    model.fc.q()
                 )]
 
                 names = [
@@ -195,15 +195,15 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                     q.data for
                     i, g in enumerate(model.residual_block_groups) for
                     j, b in enumerate(g.residual_blocks) for
-                    k, q in enumerate((b.p, b.r)) if q is not None
-                ] + [model.fc.p.data, model.fc.q.data]
+                    k, q in enumerate((b.p(), b.r())) if q is not None
+                ] + [model.fc.p().data, model.fc.q().data]
 
                 names = [
                     'g{i}-b{j}-{indicator}'
                     .format(i=i+1, j=j+1, indicator=ind) for
                     i, g in enumerate(model.residual_block_groups) for
                     j, b in enumerate(g.residual_blocks) for
-                    ind, q in zip(('p', 'r'), (b.p, b.r)) if
+                    ind, q in zip(('p', 'r'), (b.p(), b.r())) if
                     q is not None
                 ] + ['fc-p', 'fc-q']
 

@@ -12,10 +12,15 @@ import splits
 
 class WeightRegularized(nn.Module):
     def reg_losses(self):
+        """
+        Should return an iterable of (OVERLAP_LOSS, UNIFORM_LOSS, SPLIT_LOSS)
+        triples.
+        """
         raise NotImplementedError
 
     @property
     def is_cuda(self):
+        # Simple hack to see if the module is built with CUDA parameters.
         if hasattr(self, '__cuda_flag_cache'):
             return self.__cuda_flag_cache
         self.__cuda_flag_cache = next(self.parameters()).is_cuda
@@ -24,36 +29,49 @@ class WeightRegularized(nn.Module):
 
 class RegularizedLinear(WeightRegularized):
     def __init__(self, in_channels, out_channels,
-                 split_size=None, split_q=None):
+                 split_size=None, split_qa=None):
         super().__init__()
+        self.split_size = split_size
+        self.use_merged_q = split_qa is not None
 
         # Linear layer.
         self.linear = nn.Linear(in_channels, out_channels)
 
-        # Split indicators.
+        # Split indicator alphas.
         if split_size:
-            self.p = splits.split_indicator(split_size, in_channels)
-            self.q = (
-                split_q or
-                splits.split_indicator(split_size, out_channels)
+            self.pa = splits.alpha(split_size, in_channels)
+            self.qa = (
+                split_qa or
+                splits.alpha(split_size, out_channels)
             )
         else:
-            self.p = None
-            self.q = None
+            self.pa = None
+            self.qa = None
+
+    def p(self):
+        return splits.q(self.pa)
+
+    def q(self):
+        return (
+            splits.merge_q(splits.q(self.qa), self.split_size)
+            if self.use_merged_q else splits.q(self.qa)
+        )
 
     def forward(self, x):
         return self.linear(x)
 
     def reg_losses(self):
         return [splits.reg_loss(
-            self.linear.weight, self.p, self.q, cuda=self.is_cuda
+            self.linear.weight, self.p(), self.q(), cuda=self.is_cuda
         )]
 
 
 class ResidualBlock(WeightRegularized):
     def __init__(self, in_channels, out_channels, stride,
-                 split_size=None, split_q=None):
+                 split_size=None, split_qa=None):
         super().__init__()
+        self.split_size = split_size
+        self.use_merged_q = split_qa is not None
 
         # 1
         self.bn1 = nn.BatchNorm2d(in_channels)
@@ -85,16 +103,28 @@ class ResidualBlock(WeightRegularized):
 
         # split indicators
         if split_size:
-            self.p = splits.split_indicator(split_size, in_channels)
-            self.r = splits.split_indicator(split_size, out_channels)
-            self.q = (
-                split_q if split_q is not None else
-                splits.split_indicator(split_size, out_channels)
+            self.pa = splits.alpha(split_size, in_channels)
+            self.ra = splits.alpha(split_size, out_channels)
+            self.qa = (
+                split_qa if split_qa is not None else
+                splits.alpha(split_size, out_channels)
             )
         else:
-            self.p = None
-            self.r = None
-            self.q = None
+            self.pa = None
+            self.ra = None
+            self.qa = None
+
+    def p(self):
+        return splits.q(self.pa)
+
+    def r(self):
+        return splits.q(self.ra)
+
+    def q(self):
+        return (
+            splits.merge_q(splits.q(self.qa), self.split_size)
+            if self.use_merged_q else splits.q(self.qa)
+        )
 
     def forward(self, x):
         x_nonlinearity_applied = self.relu1(self.bn1(x))
@@ -103,40 +133,39 @@ class ResidualBlock(WeightRegularized):
         return y.add_(self.conv_transform(x) if self.need_transform else x)
 
     def reg_losses(self):
-        weight_and_split_indicators = filter(partial(operator.is_not, None), [
-            (self.w1, self.p, self.r),
-            (self.w2, self.r, self.q),
-            (self.w3, self.p, self.q) if self.need_transform else None
+        weights_and_split_indicators = filter(partial(operator.is_not, None), [
+            (self.w1, self.p(), self.r()),
+            (self.w2, self.r(), self.q()),
+            (self.w3, self.p(), self.q()) if self.need_transform else None
         ])
 
         return [
             splits.reg_loss(w, p, q, cuda=self.is_cuda) for w, p, q in
-            weight_and_split_indicators if (p is not None and q is not None)
+            weights_and_split_indicators if (p is not None and q is not None)
         ]
 
 
 class ResidualBlockSplitBottleneck(ResidualBlock):
     """ResidualBlock with split bottleneck"""
     def __init__(self, in_channels, out_channels, stride,
-                 split_size=None, split_q=None):
+                 split_size=None, split_qa=None):
         super().__init__(in_channels, out_channels, stride)
 
         # split indicators
         if split_size:
-            self.p = split_q
-            self.r = splits.split_indicator(split_size, out_channels)
-            self.q = split_q
+            self.pa = split_qa
+            self.ra = splits.alpha(split_size, out_channels)
+            self.qa = split_qa
         else:
-            self.p = None
-            self.r = None
-            self.q = None
+            self.pa = None
+            self.ra = None
+            self.qa = None
 
 
 class ResidualBlockGroup(WeightRegularized):
     def __init__(self, block_number, in_channels, out_channels, stride,
-                 split_size=None, split_q_last=None):
+                 split_size=None, split_qa_last=None):
         super().__init__()
-        assert (split_size is None) == (split_q_last is None)
 
         # Residual block group's hyperparameters.
         self.block_number = block_number
@@ -144,8 +173,8 @@ class ResidualBlockGroup(WeightRegularized):
         self.out_channels = out_channels
         self.stride = stride
         self.split_size = split_size
-        self.split_q_last = split_q_last
-        self.splitted = split_size is not None and split_q_last is not None
+        self.split_qa_last = split_qa_last
+        self.splitted = split_size is not None
 
         # Define residual blocks in a reversed order. This is to define
         # feature groups in hierarchical manner - from subgroups to
@@ -157,15 +186,9 @@ class ResidualBlockGroup(WeightRegularized):
             is_split_bottleneck = (i % 2 == 1)
 
             if self.splitted:
-                # Deep Split & Hierarchical Grouping.
-                q = (
-                    self.split_q_last if is_last else
-                    splits.merge_split_indicator(
-                        residual_blocks[0].p, self.split_size
-                    )
-                )
+                qa = self.split_qa_last if is_last else residual_blocks[0].pa
             else:
-                q = None
+                qa = None
 
             block_class = (
                 ResidualBlockSplitBottleneck if is_split_bottleneck else
@@ -176,7 +199,7 @@ class ResidualBlockGroup(WeightRegularized):
                 self.out_channels,
                 self.stride if is_first else 1,
                 split_size=split_size,
-                split_q=q,
+                split_qa=qa,
             )
             residual_blocks.insert(0, block)
         # Register the residual block modules.
@@ -265,21 +288,20 @@ class WideResNet(WeightRegularized):
             try:
                 # Case of splitting a residual block group.
                 split_size = split_sizes_stack.pop()
-                split_q_last = splits.merge_split_indicator(
-                    self.fc.p if is_last else
-                    residual_block_groups[0].residual_blocks[0].p,
-                    split_size
+                split_qa_last = (
+                    self.fc.pa if is_last else
+                    residual_block_groups[0].residual_blocks[0].pa
                 )
             except IndexError:
                 # Case of not splitting a residual block group.
                 split_size = None
-                split_q_last = None
+                split_qa_last = None
 
             # Push the residual block groups from upside down.
             residual_block_groups.insert(0, ResidualBlockGroup(
                 blocks_per_group, i, o, s,
                 split_size=split_size,
-                split_q_last=split_q_last,
+                split_qa_last=split_qa_last,
             ))
         # Register the residual block group modules.
         self.residual_block_groups = nn.ModuleList(residual_block_groups)

@@ -84,23 +84,25 @@ def reg_loss(w, p, q, cuda=True):
 
 
 def alpha(splits, dimension, std=0.01, cuda=True):
-    alpha = Variable(
-        torch.Tensor(splits, dimension).normal_(std=std),
+    alpha = torch.Tensor(splits, dimension).normal_(std=std)
+    return Variable(
+        alpha.cuda() if cuda else alpha,
         requires_grad=True
     )
-    return alpha.cuda() if cuda else alpha
 
 
-def split_indicator(splits, dimension, cuda=True):
+def q(alpha):
+    if alpha is None:
+        return None
+
     softmax = nn.Softmax()
-    alpha = Variable(
-        torch.Tensor(splits, dimension).normal_(std=0.01),
-        requires_grad=True
-    )
-    return softmax((alpha.cuda() if cuda else alpha).t()).t()
+    return softmax(alpha.t()).t()
 
 
-def merge_split_indicator(q, supergroups):
+def merge_q(q, supergroups):
+    if q is None:
+        return None
+
     splits, _ = q.size()
 
     # decide in which supergroup each split belongs to.
