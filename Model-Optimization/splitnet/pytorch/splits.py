@@ -83,6 +83,14 @@ def reg_loss(w, p, q, cuda=True):
     return overlap_loss, uniform_loss, split_loss
 
 
+def alpha(splits, dimension, std=0.01, cuda=True):
+    alpha = Variable(
+        torch.Tensor(splits, dimension).normal_(std=std),
+        requires_grad=True
+    )
+    return alpha.cuda() if cuda else alpha
+
+
 def split_indicator(splits, dimension, cuda=True):
     softmax = nn.Softmax()
     alpha = Variable(

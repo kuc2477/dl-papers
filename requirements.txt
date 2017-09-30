@@ -20,4 +20,5 @@ requests
 tqdm
 lmdb
 ipython
+jupyter
 visdom

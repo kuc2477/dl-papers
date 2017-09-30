@@ -4,6 +4,7 @@ import shutil
 import torch
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from torch.nn import init
 
 
 def get_data_loader(dataset, batch_size, cuda=False):
@@ -77,3 +78,20 @@ def validate(model, dataset, test_size=256, cuda=False, verbose=True):
     if verbose:
         print('=> precision: {:.3f}'.format(precision))
     return precision
+
+
+def xavier_initialize(model):
+    modules = [
+        m for n, m in model.named_modules() if
+        'conv' in n or 'linear' in n
+    ]
+
+    parameters = [
+        p for
+        m in modules for
+        p in m.parameters() if
+        p.dim() >= 2
+    ]
+
+    for p in parameters:
+        init.xavier_normal(p)

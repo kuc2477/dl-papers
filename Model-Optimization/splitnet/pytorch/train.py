@@ -69,11 +69,11 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
             # update the network.
             cross_entropy_loss = criterion(scores, labels)
             overlap_loss, uniform_loss, split_loss = model.reg_loss()
-            reg_loss = (
-                overlap_loss * gamma1 +
-                uniform_loss * gamma3 +
-                split_loss * gamma2
-            )
+            overlap_loss *= gamma1
+            uniform_loss *= gamma3
+            split_loss *= gamma2
+            reg_loss = overlap_loss + uniform_loss + split_loss
+
             total_loss = cross_entropy_loss + reg_loss
             total_loss.backward(retain_graph=True)
             optimizer.step()
@@ -102,24 +102,36 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
             ))
 
             # Send test precision to the visdom server.
-            if iteration % eval_log_interval:
-                visual.visualize_scalar(
-                    utils.validate(model, test_dataset, verbose=False),
-                    'precision', iteration
-                )
+            if iteration % eval_log_interval == 0:
+                visual.visualize_scalar(utils.validate(
+                    model, test_dataset,
+                    test_size=test_size, cuda=cuda, verbose=False
+                ), 'precision', iteration, env=model.name)
 
             # Send losses to the visdom server.
             if iteration % loss_log_interval == 0:
                 reg_losses_and_names = ([
-                    overlap_loss.data * gamma1 / data_size,
-                    uniform_loss.data * gamma2 / data_size,
-                    split_loss.data * gamma3 / data_size,
+                    overlap_loss.data / data_size,
+                    uniform_loss.data / data_size,
+                    split_loss.data / data_size,
                     reg_loss.data / data_size,
                 ], ['overlap', 'uniform', 'split', 'total'])
 
+                visual.visualize_scalar(
+                    overlap_loss.data / data_size,
+                    'overlap loss', iteration, env=model.name
+                )
+                visual.visualize_scalar(
+                    uniform_loss.data / data_size,
+                    'uniform loss', iteration, env=model.name
+                )
+                visual.visualize_scalar(
+                    split_loss.data / data_size,
+                    'split loss', iteration, env=model.name
+                )
                 visual.visualize_scalars(
                     *reg_losses_and_names,
-                    'regulaization loss', iteration, env=model.name
+                    'regulaization losses', iteration, env=model.name
                 )
 
                 model_losses_and_names = ([
@@ -128,22 +140,33 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                     total_loss.data / data_size,
                 ], ['cross entropy', 'regularization', 'total'])
 
+                visual.visualize_scalar(
+                    cross_entropy_loss.data / data_size,
+                    'cross entropy loss', iteration, env=model.name
+                )
+
+                visual.visualize_scalar(
+                    reg_loss.data / data_size,
+                    'regularization loss', iteration, env=model.name
+                )
+
                 visual.visualize_scalars(
                     *model_losses_and_names,
-                    'model loss', iteration, env=model.name
+                    'model losses', iteration, env=model.name
                 )
 
             if iteration % weight_log_interval == 0:
                 # Send visualized weights to the visdom server.
                 weights = [
                     (w.data, p, q) for
-                    g in model.residual_block_groups for
+                    i, g in enumerate(model.residual_block_groups) for
                     b in g.residual_blocks for
                     w, p, q in (
                         (b.w1, b.p, b.r),
                         (b.w2, b.r, b.q),
                         (b.w3, b.p, b.q),
-                    ) if w is not None
+                    ) if i+1 > (len(model.residual_block_groups) -
+                                (len(model.split_sizes)-1)) and w is not None
                 ] + [(
                     model.fc.linear.weight.data,
                     model.fc.p,
@@ -154,7 +177,9 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                     'g{i}-b{j}-w{k}'.format(i=i+1, j=j+1, k=k+1) for
                     i, g in enumerate(model.residual_block_groups) for
                     j, b in enumerate(g.residual_blocks) for
-                    k, w in enumerate((b.w1, b.w2, b.w3)) if w is not None
+                    k, w in enumerate((b.w1, b.w2, b.w3)) if
+                    i+1 > (len(model.residual_block_groups) -
+                           (len(model.split_sizes)-1)) and w is not None
                 ] + ['fc-w']
 
                 for (w, p, q), name in zip(weights, names):
@@ -170,7 +195,7 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                     q.data for
                     i, g in enumerate(model.residual_block_groups) for
                     j, b in enumerate(g.residual_blocks) for
-                    k, q in enumerate((b.p, b.r, b.q)) if q is not None
+                    k, q in enumerate((b.p, b.r)) if q is not None
                 ] + [model.fc.p.data, model.fc.q.data]
 
                 names = [
@@ -178,7 +203,7 @@ def train(model, train_dataset, test_dataset=None, model_dir='models',
                     .format(i=i+1, j=j+1, indicator=ind) for
                     i, g in enumerate(model.residual_block_groups) for
                     j, b in enumerate(g.residual_blocks) for
-                    ind, q in zip(('p', 'r', 'q'), (b.p, b.r, b.q)) if
+                    ind, q in zip(('p', 'r'), (b.p, b.r)) if
                     q is not None
                 ] + ['fc-p', 'fc-q']
 

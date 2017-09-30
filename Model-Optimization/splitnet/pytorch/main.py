@@ -27,12 +27,12 @@ parser.add_argument('--gamma3', type=float, default=10.)
 parser.add_argument('--weight-decay', type=float, default=1e-04)
 parser.add_argument('--lr', type=float, default=1e-04)
 parser.add_argument('--lr-decay', type=float, default=.1)
-parser.add_argument('--lr-decay-epochs', type=int, default=[30, 50, 120],
+parser.add_argument('--lr-decay-epochs', type=int, default=[30, 80, 120],
                     nargs='+')
 parser.add_argument('--epochs', type=int, default=100)
 parser.add_argument('--batch-size', type=int, default=64)
 parser.add_argument('--test-size', type=int, default=1000)
-parser.add_argument('--eval-log-interval', type=int, default=30)
+parser.add_argument('--eval-log-interval', type=int, default=50)
 parser.add_argument('--loss-log-interval', type=int, default=30)
 parser.add_argument('--weight-log-interval', type=int, default=500)
 parser.add_argument('--checkpoint-interval', type=int, default=500)
@@ -66,6 +66,9 @@ if __name__ == '__main__':
         baseline_channels=args.baseline_channels,
         split_sizes=args.split_sizes,
     )
+
+    # initialize the weights.
+    utils.xavier_initialize(wrn)
 
     # prepare cuda if needed.
     if cuda:
