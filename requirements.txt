@@ -1,6 +1,8 @@
 # pytorch
 http://download.pytorch.org/whl/cu80/torch-0.2.0.post3-cp35-cp35m-manylinux1_x86_64.whl 
-torchvision
+torchvision==0.1.8
+torchtext==0.1.1
+visdom
 
 # tensorflow
 tensorflow-gpu
@@ -13,12 +15,15 @@ scikit-image
 numpy
 pillow
 
-# utils
+# utils (debugging)
 pdbpp
-colorama
-requests
-tqdm
-lmdb
+ipdb
 ipython
 jupyter
-visdom
+
+# utils (others)
+colorama
+tqdm
+lmdb
+requests
+fake-useragent
