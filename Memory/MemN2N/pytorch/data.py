@@ -15,6 +15,7 @@ import numpy as np
 import requests
 from tqdm import tqdm
 from fake_useragent import FakeUserAgent
+import torch
 from torch.utils.data import Dataset
 
 
@@ -47,8 +48,8 @@ class BabiQA(Dataset):
         self._train = train
         self._path = os.path.join(path, self._DIRNAME)
         self._path_to_dataset = os.path.join(self._path, self._dataset_name)
-        self._path_to_tempfiles = os.path.join(
-            self._path + '-temp', self._dataset_name
+        self._path_to_preprocessed = os.path.join(
+            self._path + '-preprocessed', self._dataset_name
         )
 
         if download:
@@ -74,7 +75,11 @@ class BabiQA(Dataset):
     def __getitem__(self, index):
         path = self._paths[index]
         loaded = np.load(path)
-        return loaded['sentences'], loaded['query'], loaded['answer']
+        return (
+            torch.from_numpy(loaded['sentences']),
+            torch.from_numpy(loaded['query']),
+            torch.from_numpy(loaded['answer']),
+        )
 
     def __len__(self):
         return len(self._paths)
@@ -113,18 +118,24 @@ class BabiQA(Dataset):
     def _load_to_disk(self, tasks, sentence_size,
                       train=True, fresh=False,
                       pool_size=multiprocessing.cpu_count()*3):
-        with _progress('=> Preprocessing the dataset... '):
+        with _progress('=> Preprocessing the data... '):
             paths = itertools.chain(*Pool(pool_size).map(functools.partial(
                 self._load_task_data_to_disk,
                 sentence_size=sentence_size,
                 train=train, fresh=fresh,
             ), tasks))
+            """
+            paths = itertools.chain(*[self._load_task_data_to_disk(
+                task, sentence_size=sentence_size, train=train, fresh=fresh
+            ) for task in tasks])
+            """
+
         return list(paths)
 
     def _load_task_data_to_disk(self, task, sentence_size,
                                 train=True, fresh=False):
         dirpath = os.path.join(
-            self._path_to_tempfiles,
+            self._path_to_preprocessed,
             '{task}-{train}-{vocabulary_hash}'.format(
                 task=task, train=('train' if train else 'test'),
                 vocabulary_hash=self.vocabulary_hash
@@ -160,18 +171,16 @@ class BabiQA(Dataset):
         ])
         encoded_query = self._encode_words(
             query, sentence_size=sentence_size
-        )[0]
+        )[0, None]
         encoded_answer = self._encode_words(
             answer, sentence_size=sentence_size
-        )[0]
+        )[0, None]
         return encoded_sentences, encoded_query, encoded_answer
 
     def _encode_words(self, *words, sentence_size):
         paddings = (self._PADDING,) * (sentence_size-len(words))
         indices = np.array([self.word2idx(w) for w in words + paddings])
-        onehot = np.zeros((sentence_size, self.vocabulary_size))
-        onehot[np.arange(sentence_size), indices] = 1
-        return onehot.astype(np.uint8)
+        return indices.astype(np.int64)
 
     def _generate_vocabulary(self, tasks, vocabulary_size, train=True):
         with _progress('=> Generating a vocabulary... '):
@@ -224,17 +233,12 @@ class BabiQA(Dataset):
             raise FileNotFoundError
 
     def _download(self):
-        fa = FakeUserAgent()
-        stream = requests.get(
-            self._URL, stream=True,
-            headers={'user-agent': fa.chrome}
-        )
-
         if not os.path.exists(self._path):
             os.makedirs(self._path)
+        # Check if the dataset already exists or not.
         elif os.listdir(self._path):
             print()
-            print('=> Using the dataset in {dir} for "{target}"'.format(
+            print('=> Using the dataset in "{dir}" for "{target}"'.format(
                 dir=self._path, target='{dataset_name}-{train}'
                 .format(
                     dataset_name=self._dataset_name,
@@ -242,6 +246,12 @@ class BabiQA(Dataset):
                 )
             ))
             return
+
+        fa = FakeUserAgent()
+        stream = requests.get(
+            self._URL, stream=True, timeout=3,
+            headers={'user-agent': fa.chrome}
+        )
 
         if not stream.ok:
             raise RuntimeError(
@@ -269,7 +279,6 @@ class BabiQA(Dataset):
             shutil.copyfileobj(stream.raw, f)
             stream.close()
 
-        print()
         with _progress('=> Extracting... '):
             os.system('tar -xzf {tar} --strip-components=1 -C {dest}'.format(
                 tar=download_path, dest=self._path
