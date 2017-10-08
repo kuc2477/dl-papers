@@ -1,36 +1,34 @@
-from torch import Tensor
 from torch import nn
-from torch.autograd import Variable
 
 
-class AbstractMemory(nn.Module):
+class Memory(nn.Module):
     def __init__(self,
-                 vocabulary_size, sentence_size,
-                 embedding_size, memory_size,
-                 embedding=None):
-        self.embedding_size = embedding_size
+                 vocabulary_size, embedding_size,
+                 sentence_size, memory_size,
+                 embedding=None,
+                 embedding_temporal=None):
+        super().__init__()
         self.memory_size = memory_size
-
-        self.softmax = nn.Softmax()
+        self.embedding_size = embedding_size
         self.embedding = embedding or nn.Embedding(
-            vocabulary_size, embedding_size
-        )
-        self.memory = Variable(Tensor(
+            vocabulary_size, embedding_size)
+        self.embedding_temporal = embedding_temporal or nn.Embedding(
             memory_size, embedding_size
-        ).normal_(std=.1))
+        )
 
+    def forward(self, x):
+        return (
+            self.position_encoding(x) * self.embedding(x) +
+            self.temporal_encoding(x)
+        )
 
-class InputMemory(AbstractMemory):
-    def forward(self, x, query):
-        embedded_x = self.embedding(x)
-        embedded_query = self.embedding(query)
-        return self.softmax(embedded_query.dot(embedded_x))
+    def position_encoding(self, x):
+        # TODO: NOT IMPLEMENTED YET
+        pass
 
-
-class OutputMemory(AbstractMemory):
-    def forward(self, x, p):
-        embedded_x = self.embedding(x)
-        return (p * embedded_x).sum()
+    def temporal_encoding(self, x):
+        # TODO: NOT IMPLEMENTED YET
+        pass
 
 
 class MemN2N(nn.Module):
@@ -48,14 +46,14 @@ class MemN2N(nn.Module):
 
         self.linear = nn.Linear(self.vocabulary_size, self.embedding_size)
         self.softmax = nn.Softmax()
-        self.A = InputMemory(
+        self.A = Memory(
             self.vocabulary_size,
             self.sentence_size,
             self.embedding_size,
             self.memory_size
         )
 
-        self.C = OutputMemory(
+        self.C = Memory(
             self.vocabulary_size,
             self.sentence_size,
             self.embedding_size,
@@ -64,6 +62,8 @@ class MemN2N(nn.Module):
 
     def forward(self, x, query):
         u = self.A.embedding(query)
-        p = self.A(x, u)
-        o = self.C(x, p)
+        m = self.A(x)
+        c = self.C(x)
+        p = self.softmax(u.dot(m))
+        o = p.dot(c)
         return self.softmax(self.linear(o + u))

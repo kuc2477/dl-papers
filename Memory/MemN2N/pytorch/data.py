@@ -85,13 +85,17 @@ class BabiQA(Dataset):
         return len(self._paths)
 
     @property
-    def vocabulary_hash(self):
-        joined = ' '.join(self._vocabulary)
-        return hashlib.sha256(joined.encode()).hexdigest()[:10]
+    def dataset_hash(self):
+        key = '/'.join([*self._vocabulary]) + '-{}'.format(self._sentence_size)
+        return hashlib.sha256(key.encode()).hexdigest()[:10]
 
     @property
     def vocabulary_size(self):
         return len(self._vocabulary) + 2
+
+    @property
+    def sentence_size(self):
+        return self._sentence_size
 
     @property
     def unknown_idx(self):
@@ -136,9 +140,9 @@ class BabiQA(Dataset):
                                 train=True, fresh=False):
         dirpath = os.path.join(
             self._path_to_preprocessed,
-            '{task}-{train}-{vocabulary_hash}'.format(
+            '{task}-{train}-{dataset_hash}'.format(
                 task=task, train=('train' if train else 'test'),
-                vocabulary_hash=self.vocabulary_hash
+                dataset_hash=self.dataset_hash
             )
         )
 
