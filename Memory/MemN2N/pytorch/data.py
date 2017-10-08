@@ -5,6 +5,7 @@ import collections
 import copy
 import hashlib
 import re
+import operator
 import os
 import os.path
 import shutil
@@ -17,6 +18,9 @@ from tqdm import tqdm
 from fake_useragent import FakeUserAgent
 import torch
 from torch.utils.data import Dataset
+
+
+_CPU_COUNT = multiprocessing.cpu_count()
 
 
 @contextlib.contextmanager
@@ -40,6 +44,7 @@ class BabiQA(Dataset):
                  dataset_name='en-valid-10k',
                  tasks=None,
                  sentence_size=20,
+                 sentence_number=None,
                  vocabulary=None,
                  vocabulary_size=200,
                  train=True, download=True, fresh=False, path='./datasets'):
@@ -56,6 +61,7 @@ class BabiQA(Dataset):
             self._download()
 
         self._sentence_size = sentence_size
+        self._sentence_number = sentence_number
         self._vocabulary = vocabulary or self._generate_vocabulary(
             self._tasks, vocabulary_size-2, train=self._train
         )
@@ -69,6 +75,7 @@ class BabiQA(Dataset):
         self._paths = self._load_to_disk(
             self._tasks,
             sentence_size=self._sentence_size,
+            sentence_number=self._sentence_number,
             train=self._train, fresh=fresh,
         )
 
@@ -86,7 +93,9 @@ class BabiQA(Dataset):
 
     @property
     def dataset_hash(self):
-        key = '/'.join([*self._vocabulary]) + '-{}'.format(self._sentence_size)
+        key = '/'.join([*self._vocabulary])
+        key += '-{}'.format(self._sentence_size)
+        key += '-{}'.format(self._sentence_number)
         return hashlib.sha256(key.encode()).hexdigest()[:10]
 
     @property
@@ -119,25 +128,25 @@ class BabiQA(Dataset):
         for path in self._paths:
             os.unlink(path)
 
-    def _load_to_disk(self, tasks, sentence_size,
-                      train=True, fresh=False,
-                      pool_size=multiprocessing.cpu_count()*3):
-        with _progress('=> Preprocessing the data... '):
-            paths = itertools.chain(*Pool(pool_size).map(functools.partial(
-                self._load_task_data_to_disk,
-                sentence_size=sentence_size,
-                train=train, fresh=fresh,
-            ), tasks))
-            """
-            paths = itertools.chain(*[self._load_task_data_to_disk(
-                task, sentence_size=sentence_size, train=train, fresh=fresh
-            ) for task in tasks])
-            """
+    def _load_to_disk(self, tasks, sentence_size, sentence_number=None,
+                      train=True, fresh=False, pool_size=_CPU_COUNT*3):
+        try:
+            with _progress('=> Preprocessing the data... '):
+                pool = Pool(pool_size)
+                partial = functools.partial(
+                    self._load_task_data_to_disk,
+                    sentence_size=sentence_size,
+                    sentence_number=sentence_number,
+                    train=train, fresh=fresh,
+                )
+                return list(itertools.chain(*pool.map(partial, tasks)))
+        except (KeyboardInterrupt, SystemExit, SystemError, Exception):
+            # TODO: NOT IMPLEMENTED YET
+            raise
 
-        return list(paths)
-
-    def _load_task_data_to_disk(self, task, sentence_size,
-                                train=True, fresh=False):
+    def _load_task_data_to_disk(self, task,
+                                sentence_size,
+                                sentence_number=None, train=True, fresh=False):
         dirpath = os.path.join(
             self._path_to_preprocessed,
             '{task}-{train}-{dataset_hash}'.format(
@@ -161,14 +170,41 @@ class BabiQA(Dataset):
             # error. The temporary files will be discarded on exit by the
             # `~_cleanup_disk()` callback.
             tmp = NamedTemporaryFile(delete=False, dir=dirpath)
-            s, q, a = self._encode_x(x, sentence_size=sentence_size)
+            s, q, a = self._encode_x(
+                x,
+                sentence_size=sentence_size,
+                sentence_number=sentence_number,
+            )
             np.savez(tmp, sentences=s, query=q, answer=a)
             tmp.close()
             paths.append(tmp.name)
         return paths
 
-    def _encode_x(self, x, sentence_size):
+    def _encode_x(self, x, sentence_size, sentence_number=None):
+        assert sentence_number is None or sentence_number > 0, (
+            'Sentence number has to be a positive integer or None'
+        )
+
         sentences, query, answer = x
+
+        # Calculate difference between number of given sentences and target
+        # sentence number. This is to pad or truncate the sentences to fit the
+        # required number of sentences.
+        diff = (
+            sentence_number-len(sentences)
+            if sentence_number is not None else 0
+        )
+        sentences_to_pad = max(0, diff)
+        sentences_to_truncate = max(0, -diff)
+
+        # Pad or truncate the sentences to fit the target sentence number.
+        if sentences_to_pad > 0:
+            null_sentence = ' '.join([self._UNKNOWN] * sentence_size)
+            null_sentences = [null_sentence] * sentences_to_pad
+            sentences = sentences + null_sentences
+        elif sentences_to_truncate > 0:
+            sentences = sentences[-sentences_to_truncate:]
+
         encoded_sentences = np.array([
             self._encode_words(*s.split(), sentence_size=sentence_size) for
             s in sentences
@@ -179,26 +215,36 @@ class BabiQA(Dataset):
         encoded_answer = self._encode_words(
             answer, sentence_size=sentence_size
         )[0, None]
+
         return encoded_sentences, encoded_query, encoded_answer
 
-    def _encode_words(self, *words, sentence_size):
+    def _encode_words(self, *words, sentence_size, sentence_number=None):
         paddings = (self._PADDING,) * (sentence_size-len(words))
-        indices = np.array([self.word2idx(w) for w in words + paddings])
+        indices = np.array([
+            self.word2idx(self._remove_ending_punctuation(w)) for
+            w in words + paddings
+        ])
         return indices.astype(np.int64)
 
-    def _generate_vocabulary(self, tasks, vocabulary_size, train=True):
+    def _generate_vocabulary(self, tasks, vocabulary_size, train=True,
+                             pool_size=_CPU_COUNT*3):
         with _progress('=> Generating a vocabulary... '):
-            counter = collections.Counter()
-            for task in tasks:
-                words = self._task_data(task, train=train).split()
-                words = [
-                    self._remove_ending_punctuation(w) for w
-                    in words if not w.isdigit()
-                ]
-                counter.update(words)
+            counters = Pool(pool_size).map(functools.partial(
+                self._generate_task_vocabulary,
+                vocabulary_size=vocabulary_size, train=train
+            ), tasks)
+        counter = functools.reduce(operator.add, counters)
         vocabulary = [w for w, c in counter.most_common(vocabulary_size)]
         vocabulary.sort()
         return tuple(vocabulary)
+
+    def _generate_task_vocabulary(self, task, vocabulary_size, train=True):
+        words = self._task_data(task, train=train).split()
+        words = [
+            self._remove_ending_punctuation(w) for w
+            in words if not w.isdigit()
+        ]
+        return collections.Counter(words)
 
     def _parse(self, data):
         sentences = []
