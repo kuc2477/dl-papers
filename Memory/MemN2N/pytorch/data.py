@@ -41,7 +41,7 @@ class BabiQA(Dataset):
     )
 
     def __init__(self,
-                 dataset_name='en-valid-10k',
+                 dataset_name='en-10k',
                  tasks=None,
                  vocabulary=None,
                  vocabulary_size=200,
