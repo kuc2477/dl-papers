@@ -12,10 +12,10 @@ import shutil
 import multiprocessing
 from multiprocessing.pool import Pool
 from tempfile import NamedTemporaryFile
-import numpy as np
 import requests
-from tqdm import tqdm
 from fake_useragent import FakeUserAgent
+from tqdm import tqdm
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 
@@ -43,10 +43,10 @@ class BabiQA(Dataset):
     def __init__(self,
                  dataset_name='en-valid-10k',
                  tasks=None,
-                 sentence_size=20,
-                 sentence_number=None,
                  vocabulary=None,
                  vocabulary_size=200,
+                 sentence_size=20,
+                 sentence_number=None,
                  train=True, download=True, fresh=False, path='./datasets'):
         self._dataset_name = dataset_name
         self._tasks = tasks or [i+1 for i in range(20)]
@@ -170,12 +170,17 @@ class BabiQA(Dataset):
             # error. The temporary files will be discarded on exit by the
             # `~_cleanup_disk()` callback.
             tmp = NamedTemporaryFile(delete=False, dir=dirpath)
-            s, q, a = self._encode_x(
+            sentences, query, answer = self._encode_x(
                 x,
                 sentence_size=sentence_size,
                 sentence_number=sentence_number,
             )
-            np.savez(tmp, sentences=s, query=q, answer=a)
+            np.savez(
+                tmp,
+                sentences=sentences,
+                query=query,
+                answer=answer,
+            )
             tmp.close()
             paths.append(tmp.name)
         return paths
@@ -211,7 +216,7 @@ class BabiQA(Dataset):
         ])
         encoded_query = self._encode_words(
             query, sentence_size=sentence_size
-        )[0, None]
+        )
         encoded_answer = self._encode_words(
             answer, sentence_size=sentence_size
         )[0, None]
@@ -255,9 +260,9 @@ class BabiQA(Dataset):
             i, l = int(i), l.strip()
             still_in_the_same_story = int(i) != 1
             try:
-                query, answer, _ = l.split('\t')
-                query = query.rstrip()
-                query = self._remove_ending_punctuation(query)
+                query, answer_and_supports = l.strip().split('?')
+                query = query.strip()
+                answer, *supports = answer_and_supports.strip().split()
                 yield copy.copy(sentences), query, answer
             except ValueError:
                 if not still_in_the_same_story:

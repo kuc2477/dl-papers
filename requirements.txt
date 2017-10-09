@@ -20,6 +20,9 @@ pdbpp
 ipdb
 ipython
 jupyter
+jupyterthemes
+jupyter_contrib_nbextensions
+jupyter_nbextensions_configurator
 
 # utils (others)
 colorama

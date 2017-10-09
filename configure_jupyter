@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+JUPYTER_DATA_DIR=$(jupyter --data-dir)
+
+jt -t gruvboxd
+jupyter contrib nbextension install --user
+jupyter nbextensions_configurator enable --user
+
+# install vim binding extension
+mkdir -p $JUPYTER_DATA_DIR/nbextensions
+cd $JUPYTER_DATA_DIR/nbextensions &&\
+  git clone https://github.com/lambdalisue/jupyter-vim-binding vim_binding &&\
+  chmod -R go-w vim_binding
