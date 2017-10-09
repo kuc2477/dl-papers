@@ -1,5 +1,7 @@
-from torch import nn, Tensor, LongTensor
-from torch.autograd import Variable
+from functools import partial as part
+from torch import nn
+from torch.nn import functional as F
+import encs
 
 
 class Memory(nn.Module):
@@ -9,7 +11,7 @@ class Memory(nn.Module):
                  sentence_size,
                  memory_size,
                  embedding=None,
-                 embedding_temporal=None,):
+                 temporal_embedding=None,):
         super().__init__()
         # Memory configurations.
         self.vocabulary_size = vocabulary_size
@@ -23,11 +25,11 @@ class Memory(nn.Module):
             nn.Embedding(vocabulary_size, embedding_size)
         )
         self.temporal_embedding = (
-            embedding_temporal or
+            temporal_embedding or
             nn.Embedding(memory_size, embedding_size)
         )
 
-    def _embedded(self, x):
+    def _embed(self, x):
         return self\
             .embedding(x.view(-1, self.sentence_size))\
             .view(
@@ -37,28 +39,16 @@ class Memory(nn.Module):
                 self.embedding_size
             )
 
-    def position_encoding(self):
-        encoding = Variable(Tensor(self.embedding_size, self.sentence_size))
-        for i, j in [(i, j) for
-                     i in range(self.embedding_size) for
-                     j in range(self.sentence_size)]:
-            encoding[i, j] = (
-                ((i+1) - (self.embedding_size+1)/2) *
-                ((j+1) - (self.sentence_size+1)/2)
-            )
-        encoding *= 4 / (self.embedding_size * self.sentence_size)
-        encoding[:, -1] = 1.
-        return encoding.t()
-
-    def temporal_encoding(self):
-        time = Variable(LongTensor(range(self.memory_size)))
-        return self.temporal_embedding(time)
-
     def forward(self, x):
-        return (
-            (self.position_encoding() * self._embedded(x)).sum(2) +
-            self.temporal_encoding()
+        position_encoding = encs.position_encoding(
+            self.embedding_size,
+            self.sentence_size
         )
+        temporal_encoding = encs.temporal_encoding(
+            self.memory_size,
+            self.temporal_embedding
+        )
+        return (position_encoding * self._embed(x)).sum(2) + temporal_encoding
 
 
 class MemN2N(nn.Module):
@@ -130,16 +120,18 @@ class MemN2N(nn.Module):
                 temporal_embedding=C_temporal_embedding
             ))
 
-        # Query embedding layer.
-        self.query_embedding = (
-            self.A_memories[0].embedding if self.tied_adjacent else
-            nn.Embedding(self.vocabulary_size, self.embedding_size)
-        )
-
-        # Affine layer.
-        self.linear = nn.Linear(self.embedding_size, self.vocabulary_size)
+        # Affine layer & Query embedding layer.
         if self.tied_adjacent:
-            self.linear.weight = self.C_memories[-1].embedding.weight.t()
+            deepest_embedding = self.C_memories[-1].embedding
+            first_embedding = self.A_memories[0].embedding
+            self.linear = part(F.linear, weight=deepest_embedding.weight)
+            self.query_embedding = first_embedding
+        else:
+            self.linear = nn.Linear(self.embedding_size, self.vocabulary_size)
+            self.query_embedding = nn.Embedding(
+                self.vocabulary_size,
+                self.embedding_size
+            )
 
     def forward(self, x, q, return_encoded=False):
         # Encode the very first query.
@@ -155,13 +147,14 @@ class MemN2N(nn.Module):
         return o + u if return_encoded else self.linear(o + u)
 
     def _embed_query(self, q):
-        return (
-            self.A_memories[0].position_encoding() *
-            self.A_memories[0].embedding(q)
-        ).sum(1)
+        position_encoding = encs.position_encoding(
+            self.embedding_size,
+            self.sentence_size,
+        )
+        return (position_encoding * self.query_embedding(q)).sum(1)
 
     def _match_between_query_and_input_memory(self, u, m):
-        return self.softmax((m * u.unsqueeze(1).expand_as(m)).sum(2))
+        return F.softmax((m * u.unsqueeze(1).expand_as(m)).sum(2))
 
     def _response_from_output_memory(self, p, c):
         return (p.unsqueeze(2).expand_as(c) * c).sum(1)
