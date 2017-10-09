@@ -92,6 +92,15 @@ class BabiQA(Dataset):
         return len(self._paths)
 
     @property
+    def vocabulary(self):
+        return self._vocabulary
+
+    @property
+    def vocabulary_hash(self):
+        key = '/'.join([*self._vocabulary])
+        return hashlib.sha256(key.encode()).hexdigest()[:10]
+
+    @property
     def dataset_hash(self):
         key = '/'.join([*self._vocabulary])
         key += '-{}'.format(self._sentence_size)

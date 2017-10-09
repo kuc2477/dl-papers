@@ -29,15 +29,15 @@ parser.add_argument('--test-size', type=int, default=1000)
 parser.add_argument('--batch-size', type=int, default=64)
 parser.add_argument('--weight-decay', type=float, default=1e-04)
 parser.add_argument('--lr', type=float, default=1e-03)
-parser.add_argument('--lr-decay', type=float, deefault=.1)
+parser.add_argument('--lr-decay', type=float, default=.1)
 parser.add_argument('--lr-decay-epochs', type=int, default=[30, 50, 80],
                     nargs='+')
 
-parser.add_argument('--checkpoint-interval')
-parser.add_argument('--eval-interval')
-parser.add_argument('--loss-interval')
-parser.add_argument('--model-dir')
-parser.add_argument('--dataset-dir')
+parser.add_argument('--checkpoint-interval', type=int, default=5000)
+parser.add_argument('--eval-interval', type=int, default=30)
+parser.add_argument('--loss-interval', type=int, default=30)
+parser.add_argument('--model-dir', default='./checkpoints')
+parser.add_argument('--dataset-dir', default='./datasets')
 
 resume_command = parser.add_mutually_exclusive_group()
 resume_command.add_argument('--resume-best', action='store_true')
@@ -51,7 +51,7 @@ main_command.add_argument('--test', action='store_true', dest='test')
 
 
 if __name__ == "__main__":
-    args = parser.parse()
+    args = parser.parse_args()
     cuda = torch.cuda.is_available() and args.cuda
     dataset_config = dict(
         dataset_name=args.babi_dataset_name,
@@ -62,9 +62,11 @@ if __name__ == "__main__":
         path=args.dataset_dir,
     )
     train_dataset = BabiQA(**dataset_config, train=True)
-    test_dataset = BabiQA(**dataset_config, train=False)
+    test_dataset = BabiQA(**dataset_config, train=False,
+                          vocabulary=train_dataset.vocabulary)
 
     memn2n = MemN2N(
+        vocabulary_hash=train_dataset.vocabulary_hash,
         vocabulary_size=args.vocabulary_size,
         embedding_size=args.embedding_size,
         sentence_size=args.sentence_size,

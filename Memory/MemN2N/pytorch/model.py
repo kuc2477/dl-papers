@@ -53,15 +53,18 @@ class Memory(nn.Module):
 
 class MemN2N(nn.Module):
     WEIGHT_TYING_SCHEMES = ADJACENT, LAYER_WISE, _ = (
-        'adjacent', 'layer-wise', None
+        'adjacent', 'layerwise', None
     )
 
     def __init__(self,
-                 vocabulary_size, embedding_size,
+                 vocabulary_hash,
+                 vocabulary_size,
+                 embedding_size,
                  sentence_size, memory_size, hops=3,
                  weight_tying_scheme=ADJACENT):
         # Model Configurations.
         super().__init__()
+        self.vocabulary_hash = vocabulary_hash
         self.vocabulary_size = vocabulary_size
         self.embedding_size = embedding_size
         self.sentence_size = sentence_size
@@ -158,6 +161,26 @@ class MemN2N(nn.Module):
 
     def _response_from_output_memory(self, p, c):
         return (p.unsqueeze(2).expand_as(c) * c).sum(1)
+
+    @property
+    def name(self):
+        return (
+            'MemN2N'
+            '-{hops}hops{weight_tying_scheme}'
+            '-{vocabulary_size}vocab-{sentence_size}len-{memory_size}mem'
+            '-{embedding_size}emb-{vocabulary_hash}'
+        ).format(
+            hops=self.hops,
+            weight_tying_scheme=(
+                '-'+self.weight_tying_scheme if self.weight_tying_scheme else
+                ''
+            ),
+            vocabulary_size=self.vocabulary_size,
+            sentence_size=self.sentence_size,
+            memory_size=self.memory_size,
+            embedding_size=self.embedding_size,
+            vocabulary_hash=self.vocabulary_hash,
+        )
 
     @property
     def tied_adjacent(self):
