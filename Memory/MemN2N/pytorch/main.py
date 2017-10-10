@@ -34,7 +34,7 @@ parser.add_argument('--lr-decay-epochs', type=int, default=[30, 50, 80],
                     nargs='+')
 
 parser.add_argument('--checkpoint-interval', type=int, default=5000)
-parser.add_argument('--eval-log-interval', type=int, default=30)
+parser.add_argument('--eval-log-interval', type=int, default=100)
 parser.add_argument('--loss-log-interval', type=int, default=30)
 parser.add_argument('--model-dir', default='./checkpoints')
 parser.add_argument('--dataset-dir', default='./datasets')
@@ -67,7 +67,7 @@ if __name__ == "__main__":
 
     memn2n = MemN2N(
         vocabulary_hash=train_dataset.vocabulary_hash,
-        vocabulary_size=args.vocabulary_size,
+        vocabulary_size=train_dataset.vocabulary_size,
         embedding_size=args.embedding_size,
         sentence_size=args.sentence_size,
         memory_size=args.memory_size,

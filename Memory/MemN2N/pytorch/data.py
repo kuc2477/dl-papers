@@ -102,7 +102,7 @@ class BabiQA(Dataset):
         return (
             LongTensor(torch.stack(x)),
             LongTensor(torch.stack(q)),
-            LongTensor(torch.stack(a)),
+            LongTensor(torch.stack(a)).squeeze(1),
         )
 
     @property

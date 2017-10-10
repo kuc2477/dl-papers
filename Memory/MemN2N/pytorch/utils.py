@@ -13,7 +13,7 @@ def get_data_loader(dataset, batch_size, cuda=False, collate_fn=None):
     return DataLoader(
         dataset, batch_size=batch_size,
         shuffle=True, collate_fn=(collate_fn or default_collate),
-        **({'num_workers': 0, 'pin_memory': True} if cuda else {})
+        **({'num_workers': 2, 'pin_memory': True} if cuda else {})
     )
 
 
@@ -64,18 +64,19 @@ def validate(model, dataset, test_size=256, cuda=False, verbose=True):
     data_loader = get_data_loader(dataset, 32, cuda=cuda)
     total_tested = 0
     total_correct = 0
-    for data, labels in data_loader:
+    for x, q, a in data_loader:
         # break on test size.
         if total_tested >= test_size:
             break
         # test the model.
-        data = Variable(data).cuda() if cuda else Variable(data)
-        labels = Variable(labels).cuda() if cuda else Variable(labels)
-        scores = model(data)
+        x = Variable(x).cuda() if cuda else Variable(x)
+        q = Variable(q).cuda() if cuda else Variable(q)
+        a = Variable(a).cuda() if cuda else Variable(a)
+        scores = model(x, q)
         _, predicted = torch.max(scores, 1)
         # update statistics.
-        total_correct += (predicted == labels).sum().data[0]
-        total_tested += len(data)
+        total_correct += (predicted == a).sum().data[0]
+        total_tested += len(x)
 
     precision = total_correct / total_tested
     if verbose:

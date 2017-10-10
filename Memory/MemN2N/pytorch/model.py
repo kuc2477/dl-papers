@@ -4,7 +4,17 @@ from torch.nn import functional as F
 import encs
 
 
-class Memory(nn.Module):
+class CudaCheckableMixin(object):
+    @property
+    def is_cuda(self):
+        # Simple hack to see if the module is built with CUDA parameters.
+        if hasattr(self, '__cuda_flag_cache'):
+            return self.__cuda_flag_cache
+        self.__cuda_flag_cache = next(self.parameters()).is_cuda
+        return self.__cuda_flag_cache
+
+
+class Memory(CudaCheckableMixin, nn.Module):
     def __init__(self,
                  vocabulary_size,
                  embedding_size,
@@ -42,16 +52,18 @@ class Memory(nn.Module):
     def forward(self, x):
         position_encoding = encs.position_encoding(
             self.embedding_size,
-            self.sentence_size
+            self.sentence_size,
+            cuda=self.is_cuda,
         )
         temporal_encoding = encs.temporal_encoding(
             self.memory_size,
-            self.temporal_embedding
+            self.temporal_embedding,
+            cuda=self.is_cuda,
         )
         return (position_encoding * self._embed(x)).sum(2) + temporal_encoding
 
 
-class MemN2N(nn.Module):
+class MemN2N(CudaCheckableMixin, nn.Module):
     WEIGHT_TYING_SCHEMES = ADJACENT, LAYER_WISE, _ = (
         'adjacent', 'layerwise', None
     )
@@ -153,6 +165,7 @@ class MemN2N(nn.Module):
         position_encoding = encs.position_encoding(
             self.embedding_size,
             self.sentence_size,
+            cuda=self.is_cuda,
         )
         return (position_encoding * self.query_embedding(q)).sum(1)
 

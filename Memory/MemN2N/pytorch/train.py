@@ -60,15 +60,15 @@ def train(model, train_dataset, test_dataset=None, collate_fn=None,
             optimizer.step()
 
             _, predicted = scores.max(1)
-            precision = (a == predicted).sum().data[0] / data_size
+            precision = (predicted == a).sum().data[0] / data_size
 
             # update & display statistics.
             data_stream.set_description((
                 'epoch: {epoch}/{epochs} | '
-                'it: {iteration} | '
+                'total iteration: {iteration} | '
                 'progress: [{trained}/{total}] ({progress:.0f}%) | '
-                'prec: {prec:.3} | '
-                'loss: {loss} '
+                'prec: {prec:.4} | '
+                'loss: {loss:.4} '
             ).format(
                 epoch=epoch,
                 epochs=epochs,
