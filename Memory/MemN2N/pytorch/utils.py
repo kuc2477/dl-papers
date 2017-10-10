@@ -4,13 +4,16 @@ import shutil
 import torch
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from torch.utils.data.dataloader import default_collate
 from torch.nn import init
 
 
-def get_data_loader(dataset, batch_size, cuda=False):
+def get_data_loader(dataset, batch_size, cuda=False, collate_fn=None):
+
     return DataLoader(
-        dataset, batch_size=batch_size, shuffle=True,
-        **({'num_workers': 1, 'pin_memory': True} if cuda else {})
+        dataset, batch_size=batch_size,
+        shuffle=True, collate_fn=(collate_fn or default_collate),
+        **({'num_workers': 0, 'pin_memory': True} if cuda else {})
     )
 
 

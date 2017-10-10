@@ -13,10 +13,10 @@ import multiprocessing
 from multiprocessing.pool import Pool
 from tempfile import NamedTemporaryFile
 import requests
-from fake_useragent import FakeUserAgent
 from tqdm import tqdm
 import numpy as np
 import torch
+from torch import LongTensor
 from torch.utils.data import Dataset
 
 
@@ -35,6 +35,11 @@ class BabiQA(Dataset):
     _UNKNOWN = '<UNK>'
     _PADDING = '<PAD>'
     _DIRNAME = 'babi'
+    _CHROME_UA = (
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/27.0.1453.93 Safari/537.36'
+    )
     _URL = (
         'http://www.thespermwhale.com/jaseweston/'
         'babi/tasks_1-20_v1-2.tar.gz'
@@ -90,6 +95,15 @@ class BabiQA(Dataset):
 
     def __len__(self):
         return len(self._paths)
+
+    @classmethod
+    def collate_fn(cls, samples):
+        x, q, a = zip(*samples)
+        return (
+            LongTensor(torch.stack(x)),
+            LongTensor(torch.stack(q)),
+            LongTensor(torch.stack(a)),
+        )
 
     @property
     def vocabulary(self):
@@ -217,7 +231,7 @@ class BabiQA(Dataset):
             null_sentences = [null_sentence] * sentences_to_pad
             sentences = sentences + null_sentences
         elif sentences_to_truncate > 0:
-            sentences = sentences[-sentences_to_truncate:]
+            sentences = sentences[sentences_to_truncate:]
 
         encoded_sentences = np.array([
             self._encode_words(*s.split(), sentence_size=sentence_size) for
@@ -311,10 +325,9 @@ class BabiQA(Dataset):
             ))
             return
 
-        fa = FakeUserAgent()
         stream = requests.get(
             self._URL, stream=True, timeout=3,
-            headers={'user-agent': fa.chrome}
+            headers={'user-agent': self._CHROME_UA}
         )
 
         if not stream.ok:

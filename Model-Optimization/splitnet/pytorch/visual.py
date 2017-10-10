@@ -1,7 +1,6 @@
 import numpy as np
 from torch.cuda import FloatTensor as CUDATensor
 from visdom import Visdom
-import skimage
 
 
 _WINDOW_CASH = {}
@@ -65,10 +64,10 @@ def visualize_kernel(kernel, name, label=None, env='main', w=250, h=250,
     )
     kernel_norm = kernel_norm.abs()
 
-    visualized = skimage.img_as_float((
+    visualized = (
         (kernel_norm - kernel_norm.min()) /
         (kernel_norm.max() - kernel_norm.min())
-    ).numpy())
+    ).numpy()
 
     _WINDOW_CASH[title] = _vis(env).image(
         visualized, win=_WINDOW_CASH.get(title),

@@ -94,7 +94,7 @@ class MemN2N(nn.Module):
                 A_temporal_embedding = C_prev.temporal_embedding if y else None
                 C_temporal_embedding = None
             # 2.2.2. Layer-Wise Weight Tying
-            elif self.tied_layers == self.LAYER_WISE:
+            elif self.tied_layers:
                 A_embedding = A_prev.embedding if y else None
                 C_embedding = C_prev.embedding if y else None
                 A_temporal_embedding = A_prev.temporal_embedding if y else None

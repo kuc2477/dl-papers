@@ -1,4 +1,4 @@
-# !/usr/bin/env python3
+#!/usr/bin/env python3
 import argparse
 import torch
 from model import MemN2N
@@ -34,8 +34,8 @@ parser.add_argument('--lr-decay-epochs', type=int, default=[30, 50, 80],
                     nargs='+')
 
 parser.add_argument('--checkpoint-interval', type=int, default=5000)
-parser.add_argument('--eval-interval', type=int, default=30)
-parser.add_argument('--loss-interval', type=int, default=30)
+parser.add_argument('--eval-log-interval', type=int, default=30)
+parser.add_argument('--loss-log-interval', type=int, default=30)
 parser.add_argument('--model-dir', default='./checkpoints')
 parser.add_argument('--dataset-dir', default='./datasets')
 
@@ -91,8 +91,10 @@ if __name__ == "__main__":
         )
     else:
         train(
-            memn2n, train_dataset,
+            memn2n,
+            train_dataset=train_dataset,
             test_dataset=test_dataset,
+            collate_fn=BabiQA.collate_fn,
             lr=args.lr,
             lr_decay=args.lr_decay,
             lr_decay_epochs=args.lr_decay_epochs,
@@ -103,7 +105,6 @@ if __name__ == "__main__":
             checkpoint_interval=args.checkpoint_interval,
             eval_log_interval=args.eval_log_interval,
             loss_log_interval=args.loss_log_interval,
-            weight_log_interval=args.weight_log_interval,
             resume_best=args.resume_best,
             resume_latest=args.resume_latest,
             cuda=cuda,
