@@ -94,6 +94,7 @@ if __name__ == "__main__":
             memn2n,
             train_dataset=train_dataset,
             test_dataset=test_dataset,
+            model_dir=args.model_dir,
             collate_fn=BabiQA.collate_fn,
             lr=args.lr,
             lr_decay=args.lr_decay,

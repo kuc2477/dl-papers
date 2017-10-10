@@ -154,7 +154,7 @@ class BabiQA(Dataset):
     def _load_to_disk(self, tasks, sentence_size, sentence_number=None,
                       train=True, fresh=False, pool_size=_CPU_COUNT*3):
         try:
-            with _progress('=> Preprocessing the data... '):
+            with _progress('=> Preprocessing the data... ', ''):
                 pool = Pool(pool_size)
                 partial = functools.partial(
                     self._load_task_data_to_disk,
@@ -315,7 +315,6 @@ class BabiQA(Dataset):
             os.makedirs(self._path)
         # Check if the dataset already exists or not.
         elif os.listdir(self._path):
-            print()
             print('=> Using the dataset in "{dir}" for "{target}"'.format(
                 dir=self._path, target='{dataset_name}-{train}'
                 .format(
