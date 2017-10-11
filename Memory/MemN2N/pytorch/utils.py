@@ -60,8 +60,11 @@ def load_checkpoint(model, model_dir, best=True):
     return epoch, precision
 
 
-def validate(model, dataset, test_size=256, cuda=False, verbose=True):
-    data_loader = get_data_loader(dataset, 32, cuda=cuda)
+def validate(model, dataset, test_size=256,
+             cuda=False, collate_fn=None, verbose=True):
+    data_loader = get_data_loader(
+        dataset, 32, collate_fn=collate_fn, cuda=cuda
+    )
     total_tested = 0
     total_correct = 0
     for x, q, a in data_loader:
@@ -73,7 +76,7 @@ def validate(model, dataset, test_size=256, cuda=False, verbose=True):
         q = Variable(q).cuda() if cuda else Variable(q)
         a = Variable(a).cuda() if cuda else Variable(a)
         scores = model(x, q)
-        _, predicted = torch.max(scores, 1)
+        _, predicted = scores.max(1)
         # update statistics.
         total_correct += (predicted == a).sum().data[0]
         total_tested += len(x)
@@ -99,3 +102,8 @@ def xavier_initialize(model):
 
     for p in parameters:
         init.xavier_normal(p)
+
+
+def gaussian_intiailize(model, std=.1):
+    for p in model.parameters():
+        init.normal(p, std=std)

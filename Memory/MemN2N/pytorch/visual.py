@@ -1,7 +1,7 @@
 import numpy as np
+import threading
 from torch.cuda import FloatTensor as CUDATensor
 from visdom import Visdom
-
 
 _WINDOW_CASH = {}
 
@@ -91,8 +91,8 @@ def visualize_scalar(scalar, name, iteration, env='main'):
 
 def visualize_scalars(scalars, names, title, iteration, env='main'):
     assert len(scalars) == len(names)
-
     # Convert scalar tensors to numpy arrays.
+    scalars, names = list(scalars), list(names)
     scalars = [s.cpu() if isinstance(s, CUDATensor) else s for s in scalars]
     scalars = [s.numpy() if hasattr(s, 'numpy') else np.array([s]) for s in
                scalars]

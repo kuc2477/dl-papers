@@ -8,9 +8,10 @@ import utils
 
 def train(model, train_dataset, test_dataset=None, collate_fn=None,
           model_dir='models', lr=1e-3, lr_decay=.1,
-          lr_decay_epochs=None, weight_decay=1e-04,
+          lr_decay_epochs=None, weight_decay=1e-04, grad_clip_norm=10.,
           batch_size=32, test_size=256, epochs=5,
           eval_log_interval=30,
+          gradient_log_interval=50,
           loss_log_interval=30,
           checkpoint_interval=500,
           resume_best=False,
@@ -57,10 +58,14 @@ def train(model, train_dataset, test_dataset=None, collate_fn=None,
             optimizer.zero_grad()
             scores = model(x, q)
             loss = criterion(scores, a)
-            optimizer.step()
+            loss.backward()
 
             _, predicted = scores.max(1)
             precision = (predicted == a).sum().data[0] / data_size
+
+            if grad_clip_norm:
+                nn.utils.clip_grad_norm(model.parameters(), grad_clip_norm)
+            optimizer.step()
 
             # update & display statistics.
             data_stream.set_description((
@@ -80,11 +85,23 @@ def train(model, train_dataset, test_dataset=None, collate_fn=None,
                 loss=(loss.data[0] / data_size),
             ))
 
+            # Send gradient norms to the visdom server.
+            if iteration % gradient_log_interval == 0:
+                names, gradients = zip(*[
+                    (n, p.grad.norm().data) for
+                    n, p in model.named_parameters()
+                ])
+                visual.visualize_scalars(
+                    gradients, names, 'gradient l2 norms',
+                    iteration, env=model.name
+                )
+
             # Send test precision to the visdom server.
             if iteration % eval_log_interval == 0:
                 visual.visualize_scalar(utils.validate(
                     model, test_dataset,
-                    test_size=test_size, cuda=cuda, verbose=False
+                    test_size=test_size, cuda=cuda,
+                    collate_fn=collate_fn, verbose=False
                 ), 'precision', iteration, env=model.name)
 
             # Send losses to the visdom server.
@@ -106,7 +123,8 @@ def train(model, train_dataset, test_dataset=None, collate_fn=None,
                 # test the model.
                 model_precision = utils.validate(
                     model, test_dataset or train_dataset,
-                    test_size=test_size, cuda=cuda, verbose=True
+                    test_size=test_size, cuda=cuda,
+                    collate_fn=collate_fn, verbose=True
                 )
 
                 # update best precision if needed.

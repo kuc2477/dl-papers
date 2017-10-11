@@ -24,10 +24,11 @@ parser.add_argument('--babi-dataset-name', default='en-10k')
 parser.add_argument(
     '--babi-tasks', type=int, default=[i+1 for i in range(20)], nargs='+'
 )
-parser.add_argument('--epochs', type=int, default=30)
-parser.add_argument('--test-size', type=int, default=1000)
-parser.add_argument('--batch-size', type=int, default=64)
+parser.add_argument('--epochs', type=int, default=10)
+parser.add_argument('--test-size', type=int, default=300)
+parser.add_argument('--batch-size', type=int, default=32)
 parser.add_argument('--weight-decay', type=float, default=1e-04)
+parser.add_argument('--grad-clip-norm', type=float, default=5.)
 parser.add_argument('--lr', type=float, default=1e-03)
 parser.add_argument('--lr-decay', type=float, default=.1)
 parser.add_argument('--lr-decay-epochs', type=int, default=[30, 50, 80],
@@ -36,6 +37,7 @@ parser.add_argument('--lr-decay-epochs', type=int, default=[30, 50, 80],
 parser.add_argument('--checkpoint-interval', type=int, default=5000)
 parser.add_argument('--eval-log-interval', type=int, default=100)
 parser.add_argument('--loss-log-interval', type=int, default=30)
+parser.add_argument('--gradient-log-interval', type=int, default=50)
 parser.add_argument('--model-dir', default='./checkpoints')
 parser.add_argument('--dataset-dir', default='./datasets')
 
@@ -76,7 +78,7 @@ if __name__ == "__main__":
     )
 
     # initialize the weights.
-    utils.xavier_initialize(memn2n)
+    utils.gaussian_intiailize(memn2n)
 
     # prepare cuda if needed.
     if cuda:
@@ -100,11 +102,13 @@ if __name__ == "__main__":
             lr_decay=args.lr_decay,
             lr_decay_epochs=args.lr_decay_epochs,
             weight_decay=args.weight_decay,
+            grad_clip_norm=args.grad_clip_norm,
             batch_size=args.batch_size,
             test_size=args.test_size,
             epochs=args.epochs,
             checkpoint_interval=args.checkpoint_interval,
             eval_log_interval=args.eval_log_interval,
+            gradient_log_interval=args.gradient_log_interval,
             loss_log_interval=args.loss_log_interval,
             resume_best=args.resume_best,
             resume_latest=args.resume_latest,
