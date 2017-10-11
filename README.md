@@ -36,7 +36,7 @@
 ## Memory
 - *Neural Turing Machines* [[arxiv, 14.10]](http://arxiv.org/abs/1410.5401)
 - *Memory Networks* [[arxiv, 14.10]](https://arxiv.org/abs/1410.3916)
-- *End-To-End Memory Networks* [[arxiv, 15.03]](https://arxiv.org/abs/1503.08895)
+- *End-To-End Memory Networks* [[arxiv, 15.03]](https://arxiv.org/abs/1503.08895) [[**PyTorch]](./Memory/MemN2N/pytorch)
 - *Overcoming catastrophic forgetting in neural networks* [[arxiv,
 16.12]](https://arxiv.org/abs/1612.00796)
 
@@ -61,7 +61,7 @@
 
 ## Model Optimization
 - *SplitNet: Learning to Semantically Split Deep Networks
-for Parameter Reduction and Model Parallelization* [[ICML, 17.07]](http://proceedings.mlr.press/v70/kim17b/kim17b.pdf) [[**Pytorch**]](./Model-Optimization/splitnet/pytorch)
+for Parameter Reduction and Model Parallelization* [[ICML, 17.07]](http://proceedings.mlr.press/v70/kim17b/kim17b.pdf) [[**PyTorch**]](./Model-Optimization/splitnet/pytorch)
 
 
 ## Network Visualization
