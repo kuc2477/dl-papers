@@ -2,7 +2,7 @@
 - 💡 Papers which gave me insights 
 - 📓 Categorized by problems and idea
 - 📆 Sorted by chronological order 
-- 🔨 Implementations in **PyTorch** or **TensorFlow**
+- 🔨 Clean implementations
 
 
 ## Model Architecture
