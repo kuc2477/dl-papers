@@ -1,8 +1,8 @@
 # Deep Learning Papers
-- Papers which gave me insights 💡
-- Categorized by problems and idea 📓
-- Sorted by chronological order 📆
-- Implementation in TensorFlow and PyTorch 🔨
+- 💡 Papers which gave me insights 
+- 📓 Categorized by problems and idea
+- 📆 Sorted by chronological order 
+- 🔨 Implementations
 
 
 ## Model Architecture
