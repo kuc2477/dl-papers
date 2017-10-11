@@ -1,6 +1,6 @@
 # Deep Learning Papers
-- Papers which gave me meaningful insights.
-- Categorized by idea and problems behind them.
+- Papers which gave me insights.
+- Categorized by problems and idea.
 - Sorted by chronological order.
 
 
