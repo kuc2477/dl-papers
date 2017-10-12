@@ -49,7 +49,11 @@ class Controller(StatefulComponent):
         self.c = None
 
     def forward(self, x):
-        self.h, self.c = self.cell(self.embedding(x), (self.h, self.c))
+        e = self.embedding(x) if x is not None else Variable(torch.zeros(
+            self.expected_batch_size,
+            self.embedding_size,
+        ))
+        self.h, self.c = self.cell(e, (self.h, self.c))
         return self.h
 
     def reset(self, batch_size):
@@ -115,26 +119,20 @@ class Head(StatefulComponent):
         return w + (1-g)*self.w
 
     def _find_by_content_addressing(self, m, k, b):
-        entire_memory_size = self.expected_batch_size * self.memory_size
-        m_unrolled = m.view(entire_memory_size, -1)
-        k_unrolled = k.unsqueeze(1).expand_as(m).view(entire_memory_size, -1)
-
-        similarity_between_key_and_memories = F\
-            .cosine_similarity(m_unrolled + EPSILON, k_unrolled + EPSILON)\
-            .view(-1, self.memory_size)
-
-        return F.softmax(b * similarity_between_key_and_memories)
+        return F.softmax(b * F.cosine_similarity(
+            m, k.unsqueeze(1).expand_as(m), 2
+        ))
 
     def _shift_by_location_addressing(self, w, s):
         shifted = Variable(Tensor(*w.size()))
         for b in range(self.expected_batch_size):
             wb, sb = w[b], s[b]
             # unroll the head positions so that we can convolve with.
-            wb_modulo_unrolled = torch.cat(
+            wb_modulo_unrolled = torch.cat([
                 wb[-self.max_shift_size:],
                 wb,
                 wb[:self.max_shift_size]
-            )
+            ])
             # convolve head positions with the shifts.
             shifted[b, :] = F.conv1d(
                 wb_modulo_unrolled.view(1, 1, -1),
@@ -153,11 +151,11 @@ class ReadHead(Head):
 
     def interpreter_splitting_scheme(self):
         return [
-            (self.memory_feature_size, lambda x: x),     # k
-            (1, F.softplus),                        # b
-            (1, F.sigmoid),                         # g
-            (2*self.max_shift_size+1, F.softmax),   # s
-            (1, lambda x: 1 + F.softplus(x))        # r
+            (self.memory_feature_size, lambda x: x),    # k
+            (1, F.softplus),                            # b
+            (1, F.sigmoid),                             # g
+            (2*self.max_shift_size+1, F.softmax),       # s
+            (1, lambda x: 1 + F.softplus(x)),           # r
         ]
 
 
@@ -168,13 +166,13 @@ class WriteHead(Head):
 
     def interpreter_splitting_scheme(self):
         return [
-            (self.memory_feature_size, lambda x: x),     # k
-            (1, F.softplus),                        # b
-            (1, F.sigmoid),                         # g
-            (2*self.max_shift_size+1, F.softmax),   # s
-            (1, lambda x: 1 + F.softplus(x))        # r,
-            (self.memory_feature_size, F.sigmoid)        # e
-            (self.memory_feature_size, lambda x: x)      # a
+            (self.memory_feature_size, lambda x: x),    # k
+            (1, F.softplus),                            # b
+            (1, F.sigmoid),                             # g
+            (2*self.max_shift_size+1, F.softmax),       # s
+            (1, lambda x: 1 + F.softplus(x)),           # r
+            (self.memory_feature_size, F.sigmoid),      # e
+            (self.memory_feature_size, lambda x: x),    # a
         ]
 
 
@@ -189,11 +187,12 @@ class Memory(StatefulComponent):
         self.bank = None
 
     def read(self, w):
-        return (w * self.bank).sum(1)
+        return (w.unsqueeze(2) * self.bank).sum(1)
 
     def write(self, w, e, a):
-        self.bank = self.bank * (1 - w*e)
-        self.bank = self.bank + w*a
+        self.bank = self.bank * (1 - w.unsqueeze(2)*e.unsqueeze(1))
+        self.bank = self.bank + w.unsqueeze(2)*a.unsqueeze(1)
+        return self.bank
 
     def reset(self, batch_size):
         super().reset(batch_size)
@@ -253,7 +252,7 @@ class NTM(StatefulComponent):
 
         h = self.controller(x)
         self.memory.write(*self.write_head(h, self.memory.bank))
-        r = self.memory.read(*self.read_head(h, self.memory.bank))
+        r = self.memory.read(self.read_head(h, self.memory.bank))
         return r if return_read_memory else self.linear(r)
 
     def reset(self, batch_size):
