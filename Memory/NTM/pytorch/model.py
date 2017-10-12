@@ -89,7 +89,6 @@ class Head(StatefulComponent):
         raise NotImplementedError
 
     def interpret(self, h):
-        __import__('pdb').set_trace()
         interpreted = self.interpreter(h)
         splits, activations = zip(*self.interpreter_splitting_scheme())
         splits = [

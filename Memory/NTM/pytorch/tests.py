@@ -35,6 +35,11 @@ def memory_size():
 
 
 @pytest.fixture
+def memory_feature_size():
+    return 15
+
+
+@pytest.fixture
 def hidden_size():
     return 15
 
@@ -63,8 +68,28 @@ def controller(dictionary_size, embedding_size, hidden_size):
 
 
 @pytest.fixture
-def read_head(hidden_size, memory_size, max_shift_size):
-    return ReadHead(hidden_size, memory_size, max_shift_size)
+def read_head(hidden_size, memory_size, memory_feature_size, max_shift_size):
+    return ReadHead(
+        hidden_size,
+        memory_size,
+        memory_feature_size,
+        max_shift_size
+    )
+
+
+@pytest.fixture
+def write_head(hidden_size, memory_size, memory_feature_size, max_shift_size):
+    return WriteHead(
+        hidden_size,
+        memory_size,
+        memory_feature_size,
+        max_shift_size,
+    )
+
+
+@pytest.fixture
+def memory(memory_size, memory_feature_size):
+    return Memory(memory_size, memory_feature_size)
 
 
 # =====================
@@ -80,13 +105,19 @@ def test_controller(controller, input_length, hidden_size, batch_size, batch):
     assert controller(batch[:, 0]).size() == (batch_size, hidden_size)
 
 
-def test_read_head(controller, read_head, batch_size, batch):
+def test_read_head(controller, read_head, memory, batch_size, batch):
     assert read_head.w is None
     controller.reset(batch_size)
     read_head.reset(batch_size)
+    memory.reset(batch_size)
+    assert read_head.expected_batch_size == batch_size
     assert read_head.w is not None
-    embedded = controller(batch[:, 0])
-    read_head.interpret(embedded)
+
+    h = controller(batch[:, 0])
+    assert len(read_head.interpret(h)) == 5
+    assert read_head.move(memory.bank, *read_head.interpret(h)).size() == (
+        batch_size, memory.memory_size
+    )
 
 
 def test_write_head():
