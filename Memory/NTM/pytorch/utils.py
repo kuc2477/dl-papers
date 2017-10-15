@@ -87,7 +87,7 @@ def validate(model, dataset, test_size=256,
     return precision
 
 
-def xavier_initialize(model):
+def xavier_initialize(model, uniform=False):
     modules = [
         m for n, m in model.named_modules() if
         'conv' in n or 'linear' in n
@@ -101,7 +101,7 @@ def xavier_initialize(model):
     ]
 
     for p in parameters:
-        init.xavier_normal(p)
+        init.xavier_normal(p) if uniform else init.xavier_normal(p)
 
 
 def gaussian_intiailize(model, std=.1):

@@ -1,4 +1,4 @@
-from random import randint
+import numpy as np
 import pytest
 import torch
 from torch.autograd import Variable
@@ -15,17 +15,22 @@ def batch_size():
 
 
 @pytest.fixture
-def dictionary_size():
-    return 30
-
-
-@pytest.fixture
 def input_length():
     return 20
 
 
 @pytest.fixture
 def embedding_size():
+    return 10
+
+
+@pytest.fixture
+def hidden_size():
+    return 15
+
+
+@pytest.fixture
+def output_size():
     return 10
 
 
@@ -40,8 +45,8 @@ def memory_feature_size():
 
 
 @pytest.fixture
-def hidden_size():
-    return 15
+def dictionary_size():
+    return 20
 
 
 @pytest.fixture
@@ -50,12 +55,14 @@ def max_shift_size():
 
 
 @pytest.fixture
-def batch(batch_size, dictionary_size, input_length):
+def batch(batch_size, embedding_size, input_length):
     samples = []
     for _ in range(batch_size):
-        sequence = [randint(0, dictionary_size-1) for _ in range(input_length)]
-        samples.append(sequence)
-    return Variable(torch.Tensor(samples).long())
+        samples.append([
+            np.random.binomial(1, 0.5, embedding_size) for
+            _ in range(input_length)
+        ])
+    return Variable(torch.from_numpy(np.array(samples)).float())
 
 
 # ========================
@@ -63,27 +70,27 @@ def batch(batch_size, dictionary_size, input_length):
 # ========================
 
 @pytest.fixture
-def controller(dictionary_size, embedding_size, hidden_size):
-    return Controller(dictionary_size, embedding_size, hidden_size)
+def controller(embedding_size, hidden_size):
+    return Controller(embedding_size, hidden_size)
 
 
 @pytest.fixture
 def read_head(hidden_size, memory_size, memory_feature_size, max_shift_size):
     return ReadHead(
-        hidden_size,
-        memory_size,
-        memory_feature_size,
-        max_shift_size
+        hidden_size=hidden_size,
+        memory_size=memory_size,
+        memory_feature_size=memory_feature_size,
+        max_shift_size=max_shift_size
     )
 
 
 @pytest.fixture
 def write_head(hidden_size, memory_size, memory_feature_size, max_shift_size):
     return WriteHead(
-        hidden_size,
-        memory_size,
-        memory_feature_size,
-        max_shift_size,
+        hidden_size=hidden_size,
+        memory_size=memory_size,
+        memory_feature_size=memory_feature_size,
+        max_shift_size=max_shift_size,
     )
 
 
@@ -93,15 +100,15 @@ def memory(memory_size, memory_feature_size):
 
 
 @pytest.fixture
-def ntm(dictionary_size, embedding_size, hidden_size,
+def ntm(embedding_size, hidden_size, output_size,
         memory_size, memory_feature_size, max_shift_size):
     return NTM(
-        dictionary_size,
-        embedding_size,
-        hidden_size,
-        memory_size,
-        memory_feature_size,
-        max_shift_size,
+        embedding_size=embedding_size,
+        hidden_size=hidden_size,
+        output_size=output_size,
+        memory_size=memory_size,
+        memory_feature_size=memory_feature_size,
+        max_shift_size=max_shift_size,
     )
 
 
@@ -109,9 +116,10 @@ def ntm(dictionary_size, embedding_size, hidden_size,
 # Model Component Tests
 # =====================
 
-def test_controller(controller, input_length, hidden_size, batch_size, batch):
+def test_controller(controller, input_length, embedding_size, hidden_size,
+                    batch_size, batch):
     # test reset
-    assert batch.size() == (batch_size, input_length)
+    assert batch.size() == (batch_size, input_length, embedding_size)
     assert controller.h is None and controller.c is None
     controller.reset(batch_size)
     assert controller.expected_batch_size == batch_size
@@ -130,7 +138,7 @@ def test_read_head(controller, read_head, memory, batch_size, batch):
     assert read_head.w is not None
     # test interpret, move and forward
     h = controller(batch[:, 0])
-    assert len(read_head.interpret(h)) == 5
+    assert len(read_head.split_hidden_state(h)) == 5
     assert read_head(h, memory.bank).size() == (batch_size, memory.memory_size)
 
 
@@ -144,7 +152,7 @@ def test_write_head(controller, write_head, memory, batch_size, batch):
     assert write_head.w is not None
     # test interpret, move and forward
     h = controller(batch[:, 0])
-    assert len(write_head.interpret(h)) == 7
+    assert len(write_head.split_hidden_state(h)) == 7
     w, e, a = write_head(h, memory.bank)
     assert w.size() == (batch_size, memory.memory_size)
     assert e.size() == (batch_size, memory.memory_feature_size)
@@ -174,25 +182,16 @@ def test_memory(controller, read_head, write_head, memory,
     memory.write(*write_head(h, memory.bank))
 
 
-def test_ntm(ntm,
-             memory_feature_size,
-             dictionary_size,
-             batch_size, batch):
+def test_ntm(ntm, output_size, batch_size, batch):
     # test reset
     assert ntm.expected_batch_size is None
     ntm.reset(batch_size)
     assert ntm.expected_batch_size == batch_size
-    # test forward (with input)
-    assert ntm(batch[:, 0], return_read_memory=True).size() == (
-        batch_size, memory_feature_size
-    )
-    assert ntm(batch[:, 0], return_read_memory=False).size() == (
-        batch_size, dictionary_size
-    )
-    # test forward (without input)
-    assert ntm(return_read_memory=True).size() == (
-        batch_size, memory_feature_size
-    )
-    assert ntm(return_read_memory=False).size() == (
-        batch_size, dictionary_size
-    )
+    # test forward
+    assert ntm(batch[:, 0]).size() == (batch_size, output_size)
+    assert ntm().size() == (batch_size, output_size)
+    # check if gradient is flowing
+    assert all([p.grad is None for p in ntm.parameters()])
+    ntm().sum().backward()
+    assert all([p.grad is not None for p in ntm.parameters()])
+    __import__('pdb').set_trace()

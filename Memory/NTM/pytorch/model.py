@@ -5,7 +5,10 @@ import torch
 from torch import Tensor
 from torch.autograd import Variable
 from torch import nn
-from torch.nn import functional as F
+from torch.nn import (
+    functional as F,
+    Parameter
+)
 from const import EPSILON
 
 
@@ -32,34 +35,61 @@ class StatefulComponent(nn.Module, metaclass=abc.ABCMeta):
 # ==============
 
 class Controller(StatefulComponent):
-    def __init__(self, dictionary_size, embedding_size, hidden_size):
-        # Configurations.
+    def __init__(self, embedding_size, hidden_size, dictionary_size=None):
+        # Configurations
         super().__init__()
         self.dictionary_size = dictionary_size
         self.embedding_size = embedding_size
         self.hidden_size = hidden_size
 
-        # Layers.
+        # Embedding layer (optional)
         self.embedding = nn.Embedding(
             self.dictionary_size,
             self.embedding_size
-        )
+        ) if dictionary_size else None
+
+        # LSTM cell to extract features from input
         self.cell = nn.LSTMCell(self.embedding_size, self.hidden_size)
+
+        # Learnable LSTM hidden state biases
+        self.h_bias = Parameter(Tensor(self.hidden_size).normal_())
+        self.c_bias = Parameter(Tensor(self.hidden_size).normal_())
+
+        # States
         self.h = None
         self.c = None
 
     def forward(self, x):
-        e = self.embedding(x) if x is not None else Variable(torch.zeros(
-            self.expected_batch_size,
-            self.embedding_size,
-        ))
+        # supply the lstm cell with zeros in the embedding space. (no input)
+        if x is None:
+            e = Variable(torch.zeros(
+                self.expected_batch_size,
+                self.embedding_size,
+            ))
+        # supply the lstm cell with an embedded input.
+        elif self.embedding:
+            e = self.embedding(x)
+        # supply the lstm cell with the input as-is. (assuming that the input
+        # is already in the embedding space)
+        else:
+            assert x.size() == (
+                self.expected_batch_size,
+                self.embedding_size
+            ), 'Input should have size of {b}x{e}, while given {s}.'.format(
+                b=self.expected_batch_size,
+                e=self.embedding_size,
+                s=x.size(),
+            )
+            e = x
+
+        # run an lstm cell and update the states.
         self.h, self.c = self.cell(e, (self.h, self.c))
         return self.h
 
     def reset(self, batch_size):
         super().reset(batch_size)
-        self.h = Variable(Tensor(batch_size, self.hidden_size))
-        self.c = Variable(Tensor(batch_size, self.hidden_size))
+        self.h = self.h_bias.clone().repeat(batch_size, 1)
+        self.c = self.c_bias.clone().repeat(batch_size, 1)
 
 
 class Head(StatefulComponent):
@@ -75,10 +105,10 @@ class Head(StatefulComponent):
         self.memory_feature_size = memory_feature_size
         self.max_shift_size = max_shift_size
 
-        # Interprets a hidden state passed from a controller
-        self.interpreter = nn.Linear(
+        # Projects a hidden state passed from the controller
+        self.linear = nn.Linear(
             self.hidden_size,
-            sum([s for s, _ in self.interpreter_splitting_scheme()])
+            sum([s for s, _ in self.hidden_state_splitting_scheme()])
         )
 
         # Current head position
@@ -89,18 +119,18 @@ class Head(StatefulComponent):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def interpreter_splitting_scheme(self):
+    def hidden_state_splitting_scheme(self):
         raise NotImplementedError
 
-    def interpret(self, h):
-        interpreted = self.interpreter(h)
-        splits, activations = zip(*self.interpreter_splitting_scheme())
+    def split_hidden_state(self, h):
+        projected = self.linear(h)
+        splits, activations = zip(*self.hidden_state_splitting_scheme())
         splits = [
             reduce(op.add, [0, *splits][:i+1]) for i in
             range(len(splits)+1)
         ]
         return tuple(
-            activation(interpreted[:, s:e]) for s, e, activation in
+            activation(projected[:, s:e]) for s, e, activation in
             zip(splits[:-1], splits[1:], activations)
         )
 
@@ -113,7 +143,7 @@ class Head(StatefulComponent):
 
     def reset(self, batch_size):
         super().reset(batch_size)
-        self.w = Variable(Tensor(batch_size, self.memory_size))
+        self.w = Variable(Tensor(batch_size, self.memory_size).zero_())
 
     def _interpolate_with_current_position(self, w, g):
         return w + (1-g)*self.w
@@ -146,10 +176,10 @@ class Head(StatefulComponent):
 
 class ReadHead(Head):
     def forward(self, h, m):
-        k, b, g, s, r = self.interpret(h)
+        k, b, g, s, r = self.split_hidden_state(h)
         return self.move(m, k, b, g, s, r)
 
-    def interpreter_splitting_scheme(self):
+    def hidden_state_splitting_scheme(self):
         return [
             (self.memory_feature_size, lambda x: x),    # k
             (1, F.softplus),                            # b
@@ -161,10 +191,10 @@ class ReadHead(Head):
 
 class WriteHead(Head):
     def forward(self, h, m):
-        k, b, g, s, r, e, a = self.interpret(h)
+        k, b, g, s, r, e, a = self.split_hidden_state(h)
         return self.move(m, k, b, g, s, r), e, a
 
-    def interpreter_splitting_scheme(self):
+    def hidden_state_splitting_scheme(self):
         return [
             (self.memory_feature_size, lambda x: x),    # k
             (1, F.softplus),                            # b
@@ -201,41 +231,78 @@ class Memory(StatefulComponent):
             self.memory_size,
             self.memory_feature_size,
         ))
+        nn.init.xavier_uniform(self.bank)
 
 
 class NTM(StatefulComponent):
     def __init__(self,
-                 dictionary_size, embedding_size, hidden_size,
-                 memory_size, memory_feature_size, max_shift_size):
+                 embedding_size, hidden_size,
+                 memory_size, memory_feature_size,
+                 output_size=None, head_num=3, max_shift_size=1,
+                 dictionary_size=None, dictionary_hash=None):
+        # Validation.
+        assert dictionary_size is not None or output_size is not None
+        assert ((dictionary_size is None) == (dictionary_hash is None))
+
         # Configurations.
         super().__init__()
+        self.dictionary_hash = dictionary_hash
         self.dictionary_size = dictionary_size
         self.embedding_size = embedding_size
         self.hidden_size = hidden_size
         self.memory_size = memory_size
         self.memory_feature_size = memory_feature_size
+        self.output_size = output_size
+        self.head_num = head_num
         self.max_shift_size = max_shift_size
 
         # Components.
         self.controller = Controller(
-            self.dictionary_size,
-            self.embedding_size,
-            self.hidden_size,
+            embedding_size=self.embedding_size,
+            hidden_size=self.hidden_size,
+            dictionary_size=self.dictionary_size,
         )
-        self.read_head = ReadHead(
-            self.hidden_size,
-            self.memory_size,
-            self.memory_feature_size,
-            self.max_shift_size,
-        )
-        self.write_head = WriteHead(
-            self.hidden_size,
-            self.memory_size,
-            self.memory_feature_size,
-            self.max_shift_size,
-        )
+
+        self.read_heads = nn.ModuleList([ReadHead(
+            hidden_size=self.hidden_size,
+            memory_size=self.memory_size,
+            memory_feature_size=self.memory_feature_size,
+            max_shift_size=self.max_shift_size,
+        ) for _ in range(self.head_num)])
+
+        self.write_heads = nn.ModuleList([WriteHead(
+            hidden_size=self.hidden_size,
+            memory_size=self.memory_size,
+            memory_feature_size=self.memory_feature_size,
+            max_shift_size=self.max_shift_size,
+        ) for _ in range(self.head_num)])
+
         self.memory = Memory(self.memory_size, self.memory_feature_size)
-        self.linear = nn.Linear(self.memory_feature_size, self.dictionary_size)
+        self.linear = nn.Linear(
+            len(self.read_heads)*self.memory_feature_size + self.hidden_size,
+            self.dictionary_size if self.dictionary_size else self.output_size
+        )
+
+    @property
+    def name(self):
+        return ''.join([
+            'NTM-lstm',
+            '-dict{dict_size}/{dict_hash}' if self.dictionary_size else '',
+            '-embed{embedding_size}',
+            '-out{output_size}',
+            '-mem{memory_size}x{memory_feature_size}',
+            '-head{head_num}',
+            '-maxshift{max_shift_size}',
+        ]).format(
+            dict_size=self.dictionary_size,
+            dict_hash=self.dictionary_hash,
+            embedding_size=self.embedding_size,
+            output_size=self.output_size,
+            memory_size=self.memory_size,
+            memory_feature_size=self.memory_feature_size,
+            head_num=self.head_num,
+            max_shift_size=self.max_shift_size
+        )
 
     def forward(self, x=None, return_read_memory=False):
         if self.expected_batch_size is None:
@@ -251,13 +318,16 @@ class NTM(StatefulComponent):
             ).format(x.size(0), self.expected_batch_size))
 
         h = self.controller(x)
-        self.memory.write(*self.write_head(h, self.memory.bank))
-        r = self.memory.read(self.read_head(h, self.memory.bank))
-        return r if return_read_memory else self.linear(r)
+        r = []
+        for read_head, write_head in zip(self.read_heads, self.write_heads):
+            self.memory.write(*write_head(h, self.memory.bank))
+            r.append(self.memory.read(read_head(h, self.memory.bank)))
+        return r if return_read_memory else self.linear(torch.cat([*r, h], 1))
 
     def reset(self, batch_size):
         super().reset(batch_size)
         self.controller.reset(batch_size)
-        self.read_head.reset(batch_size)
-        self.write_head.reset(batch_size)
         self.memory.reset(batch_size)
+        for read_head, write_head in zip(self.read_heads, self.write_heads):
+            read_head.reset(batch_size)
+            write_head.reset(batch_size)
