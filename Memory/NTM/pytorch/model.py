@@ -235,8 +235,8 @@ class Memory(StatefulComponent):
 
 
 class NTM(StatefulComponent):
-    def __init__(self,
-                 label, embedding_size, hidden_size,
+    def __init__(self, label,
+                 embedding_size, hidden_size,
                  memory_size, memory_feature_size,
                  output_size=None, head_num=3, max_shift_size=1,
                  dictionary_size=None, dictionary_hash=None):
