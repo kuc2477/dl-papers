@@ -194,4 +194,3 @@ def test_ntm(ntm, output_size, batch_size, batch):
     assert all([p.grad is None for p in ntm.parameters()])
     ntm().sum().backward()
     assert all([p.grad is not None for p in ntm.parameters()])
-    __import__('pdb').set_trace()

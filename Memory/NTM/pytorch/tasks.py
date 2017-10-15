@@ -1,5 +1,6 @@
 import abc
 from torch import nn
+from torch.nn import functional as F
 
 
 class Task(metaclass=abc.ABCMeta):
@@ -8,11 +9,23 @@ class Task(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractproperty
-    def criterion(self):
+    def name(self):
         raise NotImplementedError
 
     @abc.abstractproperty
-    def name(self):
+    def model_input_size(self):
+        raise NotImplementedError
+
+    @abc.abstractproperty
+    def model_output_size(self):
+        raise NotImplementedError
+
+    @abc.abstractproperty
+    def model_output_activation(self):
+        raise NotImplementedError
+
+    @abc.abstractproperty
+    def criterion(self):
         raise NotImplementedError
 
 
@@ -30,12 +43,24 @@ class Copy(Task):
         pass
 
     @property
-    def criterion(self):
-        return nn.BCELoss()
-
-    @property
     def name(self):
         return 'copy'
+
+    @property
+    def model_input_size(self):
+        return self.sequence_width + 1
+
+    @property
+    def model_output_size(self):
+        return self.sequence_width
+
+    @property
+    def model_output_activation(self):
+        return F.sigmoid
+
+    @property
+    def criterion(self):
+        return nn.BCELoss()
 
 
 class RepeatCopy(Task):
@@ -56,12 +81,24 @@ class RepeatCopy(Task):
         pass
 
     @property
-    def criterion(self):
-        return nn.BCELoss()
-
-    @property
     def name(self):
         return 'repeat_copy'
+
+    @property
+    def model_input_size(self):
+        return self.sequence_width + 1
+
+    @property
+    def model_output_size(self):
+        return self.sequence_width
+
+    @property
+    def model_output_activation(self):
+        return F.sigmoid
+
+    @property
+    def criterion(self):
+        return nn.BCELoss()
 
 
 TASKS = {

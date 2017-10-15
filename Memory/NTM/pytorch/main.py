@@ -47,13 +47,14 @@ main_command.add_argument('--test', action='store_false', dest='train')
 if __name__ == '__main__':
     args = parser.parse_args()
     cuda = torch.cuda.is_available() and args.cuda
-    task = TASKS[args.task]
+    task = TASKS[args.task]()
 
     ntm = NTM(
-        embedding_size=args.embedding_size,
+        embedding_size=task.model_input_size,
         hidden_size=args.hidden_size,
         memory_size=args.memory_size,
         memory_feature_size=args.memory_feature_size,
+        output_size=task.model_output_size,
         head_num=args.head_num,
         max_shift_size=args.max_shift_size,
     )
