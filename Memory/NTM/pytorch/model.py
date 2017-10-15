@@ -236,7 +236,7 @@ class Memory(StatefulComponent):
 
 class NTM(StatefulComponent):
     def __init__(self,
-                 embedding_size, hidden_size,
+                 label, embedding_size, hidden_size,
                  memory_size, memory_feature_size,
                  output_size=None, head_num=3, max_shift_size=1,
                  dictionary_size=None, dictionary_hash=None):
@@ -246,6 +246,7 @@ class NTM(StatefulComponent):
 
         # Configurations.
         super().__init__()
+        self.label = label
         self.dictionary_hash = dictionary_hash
         self.dictionary_size = dictionary_size
         self.embedding_size = embedding_size
@@ -286,7 +287,7 @@ class NTM(StatefulComponent):
     @property
     def name(self):
         return ''.join([
-            'NTM-lstm',
+            'NTM-lstm-{label}',
             '-dict{dict_size}/{dict_hash}' if self.dictionary_size else '',
             '-embed{embedding_size}',
             '-out{output_size}',
@@ -294,6 +295,7 @@ class NTM(StatefulComponent):
             '-head{head_num}',
             '-maxshift{max_shift_size}',
         ]).format(
+            label=self.label,
             dict_size=self.dictionary_size,
             dict_hash=self.dictionary_hash,
             embedding_size=self.embedding_size,
