@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import torch
-from tasks import TASKS
+from tasks import TASKS, Copy
 from model import NTM
 from train import train
 import utils
@@ -11,10 +11,10 @@ parser = argparse.ArgumentParser(
     'Neural Turing Machine PyTorch Implementation'
 )
 
-parser.add_argument('--task', choices=TASKS.keys(), required=True)
-parser.add_argument('--hidden-size', type=int, default=10)
-parser.add_argument('--memory-size', type=int, default=120)
-parser.add_argument('--memory-feature-size', type=int, default=10)
+parser.add_argument('--task', choices=TASKS.keys(), default=Copy.name)
+parser.add_argument('--hidden-size', type=int, default=15)
+parser.add_argument('--memory-size', type=int, default=30)
+parser.add_argument('--memory-feature-size', type=int, default=15)
 parser.add_argument('--head-num', type=int, default=3)
 parser.add_argument('--max-shift-size', type=int, default=1)
 
@@ -24,8 +24,8 @@ parser.add_argument('--test-size', type=int, default=32)
 parser.add_argument('--weight-decay', type=float, default=1e-04)
 parser.add_argument('--lr', type=float, default=1e-03)
 parser.add_argument('--lr-decay', type=float, default=.1)
-parser.add_argument('--lr-decay-epochs', type=float, default=[10, 20, 30],
-                    nargs='+')
+parser.add_argument('--lr-decay-iterations', type=int,
+                    default=[10000, 30000, 40000], nargs='+')
 
 parser.add_argument('--checkpoint-interval', type=int, default=5000)
 parser.add_argument('--eval-log-interval', type=int, default=100)
@@ -50,6 +50,7 @@ if __name__ == '__main__':
     task = TASKS[args.task]()
 
     ntm = NTM(
+        label=task.name,
         embedding_size=task.model_input_size,
         hidden_size=args.hidden_size,
         memory_size=args.memory_size,
@@ -72,7 +73,7 @@ if __name__ == '__main__':
             model_dir=args.model_dir,
             lr=args.lr,
             lr_decay=args.lr_decay,
-            lr_decay_epochs=args.lr_decay_epochs,
+            lr_decay_iterations=args.lr_decay_iterations,
             weight_decay=args.weight_decay,
             batch_size=args.batch_size,
             test_size=args.test_size,

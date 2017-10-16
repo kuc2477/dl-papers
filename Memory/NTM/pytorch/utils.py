@@ -1,23 +1,14 @@
+from functools import reduce
+import operator
 import os
 import os.path
 import shutil
 import torch
 from torch.autograd import Variable
-from torch.utils.data import DataLoader
-from torch.utils.data.dataloader import default_collate
 from torch.nn import init
 
 
-def get_data_loader(dataset, batch_size, cuda=False, collate_fn=None):
-
-    return DataLoader(
-        dataset, batch_size=batch_size,
-        shuffle=True, collate_fn=(collate_fn or default_collate),
-        **({'num_workers': 2, 'pin_memory': True} if cuda else {})
-    )
-
-
-def save_checkpoint(model, model_dir, epoch, precision, best=True):
+def save_checkpoint(model, model_dir, iteration, precision, best=True):
     path = os.path.join(model_dir, model.name)
     path_best = os.path.join(model_dir, '{}-best'.format(model.name))
 
@@ -26,7 +17,7 @@ def save_checkpoint(model, model_dir, epoch, precision, best=True):
         os.makedirs(model_dir)
     torch.save({
         'state': model.state_dict(),
-        'epoch': epoch,
+        'iteration': iteration,
         'precision': precision,
     }, path)
 
@@ -55,31 +46,40 @@ def load_checkpoint(model, model_dir, best=True):
 
     # load parameters and return the checkpoint's epoch and precision.
     model.load_state_dict(checkpoint['state'])
-    epoch = checkpoint['epoch']
+    iteration = checkpoint['iteration']
     precision = checkpoint['precision']
-    return epoch, precision
+    return iteration, precision
 
 
-def validate(model, dataset, test_size=256,
-             cuda=False, collate_fn=None, verbose=True):
-    data_loader = get_data_loader(
-        dataset, 32, collate_fn=collate_fn, cuda=cuda
-    )
+def validate(model, task, test_size=256, cuda=False, verbose=True):
+    data_loader = task.data_loader(32)
     total_tested = 0
     total_correct = 0
-    for x, q, a in data_loader:
+
+    for x, y in data_loader:
         # break on test size.
         if total_tested >= test_size:
             break
-        # test the model.
+
+        # prepare the batch and reset the model's state variables.
+        model.reset(x.size(0), cuda=cuda)
         x = Variable(x).cuda() if cuda else Variable(x)
-        q = Variable(q).cuda() if cuda else Variable(q)
-        a = Variable(a).cuda() if cuda else Variable(a)
-        scores = model(x, q)
-        _, predicted = scores.max(1)
+        y = Variable(y).cuda() if cuda else Variable(y)
+
+        # run the model through the sequences.
+        for index in range(x.size(1)):
+            model(x[:, index, :])
+
+        # run the model to output sequences.
+        predictions = []
+        for index in range(y.size(1)):
+            activation = task.model_output_activation(model())
+            predictions.append(activation.round())
+        predictions = torch.stack(predictions, 1).long()
+
         # update statistics.
-        total_correct += (predicted == a).sum().data[0]
-        total_tested += len(x)
+        total_correct += (predictions == y).sum().data[0]
+        total_tested += reduce(operator.mul, predictions.size())
 
     precision = total_correct / total_tested
     if verbose:

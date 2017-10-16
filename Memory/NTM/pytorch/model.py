@@ -3,6 +3,7 @@ import operator as op
 from functools import reduce
 import torch
 from torch import Tensor
+from torch.cuda import FloatTensor as CudaTensor
 from torch.autograd import Variable
 from torch import nn
 from torch.nn import (
@@ -65,7 +66,7 @@ class Controller(StatefulComponent):
             e = Variable(torch.zeros(
                 self.expected_batch_size,
                 self.embedding_size,
-            ))
+            ).type_as(self.h.data))
         # supply the lstm cell with an embedded input.
         elif self.embedding:
             e = self.embedding(x)
@@ -86,10 +87,11 @@ class Controller(StatefulComponent):
         self.h, self.c = self.cell(e, (self.h, self.c))
         return self.h
 
-    def reset(self, batch_size):
+    def reset(self, batch_size, cuda=False):
         super().reset(batch_size)
-        self.h = self.h_bias.clone().repeat(batch_size, 1)
-        self.c = self.c_bias.clone().repeat(batch_size, 1)
+        dt = CudaTensor if cuda else Tensor
+        self.h = self.h_bias.clone().repeat(batch_size, 1).type(dt)
+        self.c = self.c_bias.clone().repeat(batch_size, 1).type(dt)
 
 
 class Head(StatefulComponent):
@@ -141,9 +143,11 @@ class Head(StatefulComponent):
         w = self.w = self._sharpen(w, r)
         return w
 
-    def reset(self, batch_size):
+    def reset(self, batch_size, cuda=False):
         super().reset(batch_size)
-        self.w = Variable(Tensor(batch_size, self.memory_size).zero_())
+        self.w = Variable(torch.zeros(batch_size, self.memory_size)).type(
+            CudaTensor if cuda else Tensor
+        )
 
     def _interpolate_with_current_position(self, w, g):
         return w + (1-g)*self.w
@@ -154,7 +158,7 @@ class Head(StatefulComponent):
         ))
 
     def _shift_by_location_addressing(self, w, s):
-        shifted = Variable(Tensor(*w.size()))
+        shifted = Variable(Tensor(*w.size()).type_as(w.data))
         for b in range(self.expected_batch_size):
             wb, sb = w[b], s[b]
             # unroll the head positions so that we can convolve with.
@@ -224,13 +228,13 @@ class Memory(StatefulComponent):
         self.bank = self.bank + w.unsqueeze(2)*a.unsqueeze(1)
         return self.bank
 
-    def reset(self, batch_size):
+    def reset(self, batch_size, cuda=False):
         super().reset(batch_size)
         self.bank = Variable(Tensor(
             batch_size,
             self.memory_size,
             self.memory_feature_size,
-        ))
+        )).type(CudaTensor if cuda else Tensor)
         nn.init.xavier_uniform(self.bank)
 
 
@@ -326,10 +330,10 @@ class NTM(StatefulComponent):
             r.append(self.memory.read(read_head(h, self.memory.bank)))
         return r if return_read_memory else self.linear(torch.cat([*r, h], 1))
 
-    def reset(self, batch_size):
+    def reset(self, batch_size, cuda=False):
         super().reset(batch_size)
-        self.controller.reset(batch_size)
-        self.memory.reset(batch_size)
+        self.controller.reset(batch_size, cuda=cuda)
+        self.memory.reset(batch_size, cuda=cuda)
         for read_head, write_head in zip(self.read_heads, self.write_heads):
-            read_head.reset(batch_size)
-            write_head.reset(batch_size)
+            read_head.reset(batch_size, cuda=cuda)
+            write_head.reset(batch_size, cuda=cuda)

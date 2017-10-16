@@ -1,8 +1,11 @@
+from functools import reduce
+import operator
 import numpy as np
 import pytest
 import torch
 from torch.autograd import Variable
 from model import Controller, ReadHead, WriteHead, Memory, NTM
+import tasks
 
 
 # ============================
@@ -103,9 +106,34 @@ def memory(memory_size, memory_feature_size):
 def ntm(embedding_size, hidden_size, output_size,
         memory_size, memory_feature_size, max_shift_size):
     return NTM(
+        label='test',
         embedding_size=embedding_size,
         hidden_size=hidden_size,
         output_size=output_size,
+        memory_size=memory_size,
+        memory_feature_size=memory_feature_size,
+        max_shift_size=max_shift_size,
+    )
+
+
+# ======================
+# Task Specific Fixtures
+# ======================
+
+@pytest.fixture
+def copy_task():
+    return tasks.Copy()
+
+
+@pytest.fixture
+def ntm_copy(copy_task, hidden_size,
+             memory_size, memory_feature_size,
+             max_shift_size):
+    return NTM(
+        label=copy_task.name,
+        embedding_size=copy_task.model_input_size,
+        hidden_size=hidden_size,
+        output_size=copy_task.model_output_size,
         memory_size=memory_size,
         memory_feature_size=memory_feature_size,
         max_shift_size=max_shift_size,
@@ -194,3 +222,30 @@ def test_ntm(ntm, output_size, batch_size, batch):
     assert all([p.grad is None for p in ntm.parameters()])
     ntm().sum().backward()
     assert all([p.grad is not None for p in ntm.parameters()])
+
+
+def test_copy_task(ntm_copy, copy_task, batch_size):
+    # prepare the data loader and reset NTM state variables.
+    data_loader = copy_task.data_loader(batch_size)
+    x, y = next(data_loader)
+    x, y = Variable(x), Variable(y)
+    ntm_copy.reset(batch_size)
+
+    # run the model to take input sequences.
+    for index in range(x.size(1)):
+        ntm_copy(x[:, index, :])
+
+    # run the model to output sequences.
+    predictions = []
+    for index in range(y.size(1)):
+        activation = copy_task.model_output_activation(ntm_copy())
+        predictions.append(activation.round())
+
+    predictions = torch.stack(predictions, 1).long()
+    precision = (
+        (predictions == y).sum().data[0] /
+        reduce(operator.mul, predictions.size())
+    )
+
+    assert isinstance(precision, float)
+    assert 0 <= precision <= 1
