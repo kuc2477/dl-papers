@@ -58,25 +58,22 @@ def train(
         # run the model to output sequences.
         activations = []
         predictions = []
-        losses = []
         for index in range(y.size(1)):
             activation = task.model_output_activation(model())
             activations.append(activation)
             predictions.append(activation.round())
-            losses.append(task.criterion(activation, y[:, index, :].float()))
         activations = torch.stack(activations, 1)
         predictions = torch.stack(predictions, 1).long()
 
-        # calculate the precision.
-        precision = (
-            (predictions == y).sum().data[0] /
-            reduce(operator.mul, predictions.size())
-        )
-
         # back propagate the error and update the network.
-        loss = sum(losses)
+        loss = task.criterion(activations, y)
         loss.backward()
         optimizer.step()
+
+        # calculate the wrong bits per sequence.
+        total_bits = reduce(operator.mul, y.size()) // batch_size
+        wrong_bits = torch.abs(predictions-y.long()).sum().data[0] / batch_size
+        precision = 1 - wrong_bits/total_bits
 
         # update the progress.
         progress.set_description((
@@ -93,14 +90,14 @@ def train(
 
         # Send gradient norms to the visdom server.
         if iteration % gradient_log_interval == 0:
-            names, gradients = zip(*[
+            for name, gradient_norm in [
                 (n, p.grad.norm().data) for
                 n, p in model.named_parameters()
-            ])
-            visual.visualize_scalars(
-                gradients, names, 'gradient l2 norms',
-                iteration, env=model.name
-            )
+            ]:
+                visual.visualize_scalar(
+                    gradient_norm, name+' gradient l2 norm',
+                    iteration, env=model.name
+                )
 
         # Send test precision to the visdom server.
         if iteration % eval_log_interval == 0:

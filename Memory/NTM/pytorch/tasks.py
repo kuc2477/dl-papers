@@ -60,7 +60,7 @@ class Copy(Task):
             x[:, :sequence_length, :self.sequence_width] = sequences
             x[:, sequence_length, self.sequence_width] = 1.
 
-            yield x.float(), sequences
+            yield x.float(), sequences.float()
 
     @property
     def model_input_size(self):
@@ -129,7 +129,7 @@ class RepeatCopy(Task):
                 sequences.repeat(1, repeat, 1)
             y[:, sequence_length*repeat, self.sequence_width] = 1.
 
-            yield x.float(), y.long()
+            yield x.float(), y.float()
 
     @property
     def model_input_size(self):

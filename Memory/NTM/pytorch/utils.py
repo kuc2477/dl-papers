@@ -51,10 +51,13 @@ def load_checkpoint(model, model_dir, best=True):
     return iteration, precision
 
 
-def validate(model, task, test_size=256, cuda=False, verbose=True):
-    data_loader = task.data_loader(32)
+def validate(model, task,
+             test_size=256, batch_size=32,
+             cuda=False, verbose=True):
+    data_loader = task.data_loader(batch_size)
     total_tested = 0
-    total_correct = 0
+    total_bits = 0
+    wrong_bits = 0
 
     for x, y in data_loader:
         # break on test size.
@@ -77,13 +80,14 @@ def validate(model, task, test_size=256, cuda=False, verbose=True):
             predictions.append(activation.round())
         predictions = torch.stack(predictions, 1).long()
 
-        # update statistics.
-        total_correct += (predictions == y).sum().data[0]
-        total_tested += reduce(operator.mul, predictions.size())
+        # calculate the wrong bits per sequence.
+        total_tested += x.size(0)
+        total_bits += reduce(operator.mul, y.size())
+        wrong_bits += torch.abs(predictions-y.long()).sum().data[0]
 
-    precision = total_correct / total_tested
+    precision = 1 - wrong_bits/total_bits
     if verbose:
-        print('=> precision: {:.3f}'.format(precision))
+        print('=> precision: {prec:.4}'.format(prec=precision))
     return precision
 
 
