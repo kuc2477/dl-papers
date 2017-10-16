@@ -1,4 +1,5 @@
 import abc
+import time
 import random
 import numpy as np
 import torch
@@ -42,6 +43,7 @@ class Copy(Task):
         self.sequence_length_max = sequence_length_max
 
     def data_loader(self, batch_size):
+        random.seed(time.time())
         while True:
             sequence_length = random.randint(
                 self.sequence_length_min,
@@ -95,6 +97,7 @@ class RepeatCopy(Task):
         self.repeat_max = repeat_max
 
     def data_loader(self, batch_size):
+        random.seed(time.time())
         while True:
             sequence_length = random.randint(
                 self.sequence_length_min,
