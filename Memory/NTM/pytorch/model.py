@@ -158,21 +158,15 @@ class Head(StatefulComponent):
         ))
 
     def _shift_by_location_addressing(self, w, s):
-        shifted = Variable(Tensor(*w.size()).type_as(w.data))
-        for b in range(self.expected_batch_size):
-            wb, sb = w[b], s[b]
-            # unroll the head positions so that we can convolve with.
-            wb_modulo_unrolled = torch.cat([
-                wb[-self.max_shift_size:],
-                wb,
-                wb[:self.max_shift_size]
-            ])
-            # convolve head positions with the shifts.
-            shifted[b, :] = F.conv1d(
-                wb_modulo_unrolled.view(1, 1, -1),
-                sb.view(1, 1, -1)
-            ).view(-1)
-        return shifted
+        w_modulo_unrolled = torch.cat([
+            w[:, -self.max_shift_size:], w,
+            w[:, :self.max_shift_size]
+        ], 1)
+        return F.conv1d(
+            w_modulo_unrolled.view(self.expected_batch_size, 1, -1),
+            s.view(self.expected_batch_size, 1, -1)
+        )[range(self.expected_batch_size),
+          range(self.expected_batch_size), :]
 
     def _sharpen(self, w, r):
         return (w**r) / ((w**r).sum(1).view(-1, 1) + EPSILON)
