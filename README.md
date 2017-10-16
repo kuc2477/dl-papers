@@ -10,7 +10,7 @@
 ### CNN
 - *Striving for Simplicity: The All Convolutional Net* [[arxiv, 14.12]](http://arxiv.org/abs/1412.6806)
 - Deep Residual Learning for Image Recognition [[arxiv, 15.12]](https://arxiv.org/abs/1512.03385)
-- Wide Residual Networks [[arxiv, 16.05]](https://arxiv.org/abs/1605.07146) [[**PyTorch**]](./CNN/WRN/pytorch)
+- Wide Residual Networks [[arxiv, 16.05]](https://arxiv.org/abs/1605.07146) [[**PyTorch**]](./Model-Architecture/CNN/WRN/pytorch)
 
 
 ## Representation Learning & Density Estimation
@@ -20,10 +20,10 @@
 
 ### GAN
 - *Generative Adversarial Networks* [[arxiv, 14.06]](http://arxiv.org/abs/1406.2661)
-- *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks* [[arxiv, 15.11]](http://arxiv.org/abs/1511.06434) [[**TensorFlow**]](./GAN/DCGAN/tensorflow)
-- *InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets* [[arxiv. 16.06]](https://arxiv.org/abs/1606.03657) [[**TensorFlow**]](./GAN/InfoGAN/tensorflow)
+- *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks* [[arxiv, 15.11]](http://arxiv.org/abs/1511.06434) [[**TensorFlow**]](./Representation-Learning-and-Density-Estimation/GAN/DCGAN/tensorflow)
+- *InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets* [[arxiv. 16.06]](https://arxiv.org/abs/1606.03657) [[**TensorFlow**]](./Representation-Learning-and-Density-Estimation/GAN/InfoGAN/tensorflow)
 - *Energy-based Generative Adversarial Network* [[arxiv, 16.09]](https://arxiv.org/abs/1609.03126)
-- *Wasserstein GAN* [[arxiv, 17.01]](http://arxiv.org/abs/1701.07875) [[**TensorFlow**]](./GAN/WGAN/tensorflow)
+- *Wasserstein GAN* [[arxiv, 17.01]](http://arxiv.org/abs/1701.07875) [[**TensorFlow**]](./Representation-Learning-and-Density-Estimation/GAN/WGAN/tensorflow)
 - *Boundary-Seeking Generative Adversarial Networks*  [[arxiv, 17.02]](http://arxiv.org/abs/1702.08431)
 - *Learning to Discover Cross-Domain Relations with Generative Adversarial Networks*  [[arxiv, 17.03]](http://arxiv.org/abs/1703.05192)
 - *BEGAN: Boundary Equilibrium Generative Adversarial Networks* [[arxiv,
@@ -31,7 +31,7 @@
 
 
 ### VAE
-- *Auto-Encoding Variational Bayes* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114) [[**PyTorch**]](./VAE/VAE/pytorch)
+- *Auto-Encoding Variational Bayes* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114) [[**PyTorch**]](./Representation-Learning-and-Density-Estimation/VAE/VAE/pytorch)
 
 
 ## Memory
