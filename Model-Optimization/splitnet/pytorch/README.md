@@ -25,7 +25,7 @@ $ pip install -r requirements.txt
 ## CLI
 Implementation CLI is provided by `main.py`.
 
-### Usage 
+#### Usage 
 ```
 $ ./main.py --help
 $ usage: SplitNet torch implementation [-h] [--dataset {cifar10,mnist,cifar100}]
@@ -52,13 +52,13 @@ $ usage: SplitNet torch implementation [-h] [--dataset {cifar10,mnist,cifar100}]
  
 ```
 
-### Train
+#### Train
 ```
 $ python -m visom.server &
 $ ./main.py --train [--resume-latest|--resume-best]
 ```
 
-### Test
+#### Test
 ```
 $ ./main.py --test
 ```
@@ -68,12 +68,8 @@ $ ./main.py --test
 - Test phase mode of the model is not implemented yet.
 
 
-## Author
-Ha Junsoo / [@kuc2477](https://github.com/kuc2477)
-
-
-## License
-MIT
+## Author / License
+Ha Junsoo / [@kuc2477](https://github.com/kuc2477) / MIT
 
 
 ## Reference
