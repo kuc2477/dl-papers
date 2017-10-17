@@ -22,8 +22,8 @@ $ git clone https://github.com:kuc2477/dl-papers && cd dl-papers
 $ pip install -r requirements.txt
 ```
 
-## Commands
-Command line interface for the implementation is provided by `main.py`.
+## CLI
+Implementation CLI is provided by `main.py`.
 
 ### Usage 
 ```
