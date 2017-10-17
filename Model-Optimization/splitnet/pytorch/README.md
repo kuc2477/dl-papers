@@ -65,13 +65,15 @@ $ ./main.py --test
 
 
 ## Note
-- Test phase mode of the model is not implemented yet.
-
-
-## Author / License
-Ha Junsoo / [@kuc2477](https://github.com/kuc2477) / MIT
+- Block diagonal weight utilizing test phase mode of the model is not implemented yet.
 
 
 ## Reference
 * [splitnet-wrn](https://github.com/dalgu90/splitnet-wrn)
 * [SplitNet: Learning to Semantically Split Deep Networks for Parameter Reduction and Model Parallelization, ICML 2017](http://proceedings.mlr.press/v70/kim17b/kim17b.pdf)
+
+
+
+
+## Author
+Ha Junsoo / [@kuc2477](https://github.com/kuc2477) / MIT License
