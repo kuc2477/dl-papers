@@ -29,13 +29,15 @@ class WeightRegularized(nn.Module):
 
 class RegularizedLinear(WeightRegularized):
     def __init__(self, in_channels, out_channels,
-                 split_size=None, split_qa=None):
+                 split_size=None, split_qa=None, dropout_prob=.5):
         super().__init__()
         self.split_size = split_size
+        self.splitted = self.split_size is not None
         self.use_merged_q = split_qa is not None
 
-        # Linear layer.
+        # Layers.
         self.linear = nn.Linear(in_channels, out_channels)
+        self.dropout = nn.Dropout(dropout_prob)
 
         # Split indicator alphas.
         if split_size:
@@ -58,7 +60,7 @@ class RegularizedLinear(WeightRegularized):
         )
 
     def forward(self, x):
-        return self.linear(x)
+        return self.dropout(self.linear(x))
 
     def reg_losses(self):
         return [splits.reg_loss(
@@ -68,14 +70,16 @@ class RegularizedLinear(WeightRegularized):
 
 class ResidualBlock(WeightRegularized):
     def __init__(self, in_channels, out_channels, stride,
-                 split_size=None, split_qa=None):
+                 split_size=None, split_qa=None, dropout_prob=.5):
         super().__init__()
         self.split_size = split_size
+        self.splitted = self.split_size is not None
         self.use_merged_q = split_qa is not None
 
         # 1
         self.bn1 = nn.BatchNorm2d(in_channels)
         self.relu1 = nn.ReLU(inplace=True)
+        self.dropout1 = nn.Dropout2d(dropout_prob)
         self.conv1 = nn.Conv2d(
             in_channels, out_channels,
             kernel_size=3, stride=stride, padding=1, bias=False
@@ -84,6 +88,7 @@ class ResidualBlock(WeightRegularized):
         # 2
         self.bn2 = nn.BatchNorm2d(out_channels)
         self.relu2 = nn.ReLU(inplace=True)
+        self.dropout2 = nn.Dropout2d(dropout_prob)
         self.conv2 = nn.Conv2d(
             out_channels, out_channels,
             kernel_size=3, stride=1, padding=1, bias=False
@@ -127,9 +132,18 @@ class ResidualBlock(WeightRegularized):
         )
 
     def forward(self, x):
-        x_nonlinearity_applied = self.relu1(self.bn1(x))
-        y = self.conv1(x_nonlinearity_applied)
-        y = self.conv2(self.relu2(self.bn2(y)))
+        # conv1
+        x_nonlinear = self.relu1(self.bn1(x))
+        x_nonlinear = (
+            self.dropout1(x_nonlinear) if
+            self.splitted else x_nonlinear
+        )
+        y = self.conv1(x_nonlinear)
+        # conv2
+        y = self.relu2(self.bn2(y))
+        y = self.dropout2(y) if self.splitted else y
+        y = self.conv2(y)
+        # conv2 + residual
         return y.add_(self.conv_transform(x) if self.need_transform else x)
 
     def reg_losses(self):
@@ -148,8 +162,11 @@ class ResidualBlock(WeightRegularized):
 class ResidualBlockSplitBottleneck(ResidualBlock):
     """ResidualBlock with split bottleneck"""
     def __init__(self, in_channels, out_channels, stride,
-                 split_size=None, split_qa=None):
-        super().__init__(in_channels, out_channels, stride)
+                 split_size=None, split_qa=None, dropout_prob=.5):
+        super().__init__(
+            in_channels, out_channels, stride,
+            dropout_prob=dropout_prob
+        )
 
         # split indicators
         if split_size:
@@ -164,7 +181,7 @@ class ResidualBlockSplitBottleneck(ResidualBlock):
 
 class ResidualBlockGroup(WeightRegularized):
     def __init__(self, block_number, in_channels, out_channels, stride,
-                 split_size=None, split_qa_last=None):
+                 split_size=None, split_qa_last=None, dropout_prob=.5, ):
         super().__init__()
 
         # Residual block group's hyperparameters.
@@ -200,6 +217,7 @@ class ResidualBlockGroup(WeightRegularized):
                 self.stride if is_first else 1,
                 split_size=split_size,
                 split_qa=qa,
+                dropout_prob=dropout_prob,
             )
             residual_blocks.insert(0, block)
         # Register the residual block modules.
@@ -220,7 +238,7 @@ class ResidualBlockGroup(WeightRegularized):
 
 class WideResNet(WeightRegularized):
     def __init__(self, label, input_size, input_channels, classes,
-                 total_block_number, widen_factor=1,
+                 total_block_number, widen_factor=1, dropout_prob=.5,
                  baseline_strides=None,
                  baseline_channels=None,
                  split_sizes=None):
@@ -237,6 +255,7 @@ class WideResNet(WeightRegularized):
         # Model hyperparameters.
         self.total_block_number = total_block_number
         self.widen_factor = widen_factor
+        self.dropout_prob = dropout_prob
         self.split_sizes = split_sizes or [2, 2, 2]
         self.baseline_strides = baseline_strides or [1, 1, 2, 2]
         self.baseline_channels = baseline_channels or [16, 16, 32, 64]
@@ -268,7 +287,7 @@ class WideResNet(WeightRegularized):
         # 4. Affine layer.
         self.fc = RegularizedLinear(
             self.widened_channels[self.group_number], self.classes,
-            split_size=split_sizes_stack.pop()
+            split_size=split_sizes_stack.pop(), dropout_prob=dropout_prob
         )
 
         # 3. Batchnorm & nonlinearity & pooling.
@@ -302,6 +321,7 @@ class WideResNet(WeightRegularized):
                 blocks_per_group, i, o, s,
                 split_size=split_size,
                 split_qa_last=split_qa_last,
+                dropout_prob=dropout_prob,
             ))
         # Register the residual block group modules.
         self.residual_block_groups = nn.ModuleList(residual_block_groups)
@@ -359,12 +379,13 @@ class WideResNet(WeightRegularized):
 
         # Name of the model.
         return (
-            'WRN-{depth}-{widen_factor}-{split_label}'
+            'WRN-{depth}-{widen_factor}-{split_label}dropout{dropout_prob}-'
             '{label}-{size}x{size}x{channels}'
         ).format(
-            split_label=split_label,
             depth=depth,
             widen_factor=self.widen_factor,
+            split_label=split_label,
+            dropout_prob=self.dropout_prob,
             label=self.label,
             size=self.input_size,
             channels=self.input_channels,

@@ -58,9 +58,15 @@ def load_checkpoint(model, model_dir, best=True):
 
 
 def validate(model, dataset, test_size=256, cuda=False, verbose=True):
+    # set model mode as test mode.
+    model_mode = model.training
+    model.train(mode=False)
+
+    # prepare the data loader and the statistics.
     data_loader = get_data_loader(dataset, 32, cuda=cuda)
     total_tested = 0
     total_correct = 0
+
     for data, labels in data_loader:
         # break on test size.
         if total_tested >= test_size:
@@ -74,6 +80,10 @@ def validate(model, dataset, test_size=256, cuda=False, verbose=True):
         total_correct += (predicted == labels).sum().data[0]
         total_tested += len(data)
 
+    # recover the model mode.
+    model.train(mode=model_mode)
+
+    # return the precision.
     precision = total_correct / total_tested
     if verbose:
         print('=> precision: {:.3f}'.format(precision))

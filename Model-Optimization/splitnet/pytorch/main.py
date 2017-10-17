@@ -25,9 +25,10 @@ parser.add_argument('--gamma1', type=float, default=1.)
 parser.add_argument('--gamma2', type=float, default=1.)
 parser.add_argument('--gamma3', type=float, default=10.)
 parser.add_argument('--weight-decay', type=float, default=1e-04)
-parser.add_argument('--lr', type=float, default=1e-04)
+parser.add_argument('--dropout-prob', type=float, default=.5)
+parser.add_argument('--lr', type=float, default=3e-04)
 parser.add_argument('--lr-decay', type=float, default=.1)
-parser.add_argument('--lr-decay-epochs', type=int, default=[30, 80, 120],
+parser.add_argument('--lr-decay-epochs', type=int, default=[10, 30, 50],
                     nargs='+')
 parser.add_argument('--epochs', type=int, default=100)
 parser.add_argument('--batch-size', type=int, default=64)
@@ -62,6 +63,7 @@ if __name__ == '__main__':
         dataset_config['classes'],
         total_block_number=args.total_block_number,
         widen_factor=args.widen_factor,
+        dropout_prob=args.dropout_prob,
         baseline_strides=args.baseline_strides,
         baseline_channels=args.baseline_channels,
         split_sizes=args.split_sizes,
