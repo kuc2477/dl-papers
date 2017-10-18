@@ -38,3 +38,7 @@ AVAILABLE_TRANSFORMS = {
         transforms.Normalize((0.1307,), (0.3081,)),
     ]
 }
+
+DATASET_CONFIGS = {
+    'mnist': {'size': 32, 'channels': 1, 'classes': 10}
+}
