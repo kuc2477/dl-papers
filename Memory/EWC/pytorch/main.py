@@ -8,9 +8,10 @@ from model import MLP
 
 
 parser = ArgumentParser('EWC PyTorch Implementation')
-parser.add_argument('--task-number')
-parser.add_argument('--epochs-per-task')
+parser.add_argument('--task-number', type=int, default=3)
+parser.add_argument('--epochs-per-task', type=int, default=10)
 parser.add_argument('--lr', type=float, default=1e-03)
+parser.add_argument('--weight-decay', type=float, default=1e-05)
 parser.add_argument('--input-dropout-prob', type=float, default=.2)
 parser.add_argument('--hidden-dropout-prob', type=float, default=.5)
 parser.add_argument('--batch-size', type=int, default=64)
@@ -20,6 +21,9 @@ parser.add_argument('--no-gpus', action='store_false', dest='cuda')
 
 if __name__ == '__main__':
     args = parser.parse_args()
+
+    # decide whether to use cuda or not.
+    cuda = torch.cuda.is_available() and args.cuda
 
     # generate permutations for the tasks.
     np.random.seed(args.random_seed)
@@ -47,8 +51,14 @@ if __name__ == '__main__':
     )
 
     # prepare the cuda if needed.
-    if torch.cuda.is_available() and args.cuda:
+    if cuda:
         mlp.cuda()
 
     # run the experiment.
-    train(mlp)
+    train(
+        mlp, train_datasets, test_datasets,
+        epochs_per_task=args.epochs_per_task,
+        batch_size=args.batch_size, lr=args.lr,
+        weight_decay=args.weight_decay,
+        cuda=cuda
+    )

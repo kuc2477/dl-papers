@@ -82,7 +82,7 @@ def train(model, train_dataset, test_dataset=None, collate_fn=None,
                 total=dataset_size,
                 progress=(100.*(batch_index+1)/dataset_batches),
                 prec=precision,
-                loss=(loss.data[0] / data_size),
+                loss=loss.data[0],
             ))
 
             # Send gradient norms to the visdom server.
