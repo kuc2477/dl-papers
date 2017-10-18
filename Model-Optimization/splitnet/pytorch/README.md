@@ -65,7 +65,7 @@ $ ./main.py --test
 
 
 ## Note
-- Block diagonal weight utilizing test phase mode of the model is not implemented yet.
+- Block diagonal weight utilizing test phase is not implemented yet.
 
 
 ## Reference
