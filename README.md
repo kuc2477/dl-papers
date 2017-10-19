@@ -35,9 +35,9 @@
 
 
 ## Memory
-- *Neural Turing Machines* [[arxiv, 14.10]](http://arxiv.org/abs/1410.5401) [[**PyTorch**]](./Memory/NTM/pytorch)
+- *Neural Turing Machines* [[arxiv, 14.10]](http://arxiv.org/abs/1410.5401) [[**PyTorch**]](https://github.com/kuc2477/pytorch-ntm)
 - *Memory Networks* [[arxiv, 14.10]](https://arxiv.org/abs/1410.3916)
-- *End-To-End Memory Networks* [[arxiv, 15.03]](https://arxiv.org/abs/1503.08895) [[**PyTorch**]](./Memory/MemN2N/pytorch)
+- *End-To-End Memory Networks* [[arxiv, 15.03]](https://arxiv.org/abs/1503.08895) [[**PyTorch**]](https://github.com/kuc2477/pytorch-memn2n)
 - *Overcoming catastrophic forgetting in neural networks* [[arxiv,
 16.12]](https://arxiv.org/abs/1612.00796) [[**PyTorch**]](https://github.com/kuc2477/pytorch-ewc)
 
