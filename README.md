@@ -10,7 +10,7 @@
 ### CNN
 - *Striving for Simplicity: The All Convolutional Net* [[arxiv, 14.12]](http://arxiv.org/abs/1412.6806)
 - Deep Residual Learning for Image Recognition [[arxiv, 15.12]](https://arxiv.org/abs/1512.03385)
-- Wide Residual Networks [[arxiv, 16.05]](https://arxiv.org/abs/1605.07146) [[**PyTorch**]](./Model-Architecture/CNN/WRN/pytorch)
+- Wide Residual Networks [[arxiv, 16.05]](https://arxiv.org/abs/1605.07146) [[**PyTorch**]](https://github.com/kuc2477/pytorch-wrn)
 
 
 ## Representation Learning & Density Estimation
