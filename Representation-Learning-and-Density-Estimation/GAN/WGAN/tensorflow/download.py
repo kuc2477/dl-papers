@@ -1,4 +1,4 @@
-# Dataset downloading CLI script. Referenced carpedm20's DCGAN-tensorflow.
+#!/usr/bin/env python3
 import os
 import os.path
 import argparse
@@ -9,15 +9,18 @@ import requests
 from utils import log, c
 
 
+# NOTE: Dataset downloading script. Referenced carpedm20's DCGAN.
+
+
 # =============
 # Script Parser
 # =============
 
-parser = argparse.ArgumentParser(description='Dataset Downloading CLI Script')
+parser = argparse.ArgumentParser(description='CLI for dataset downloading')
 parser.add_argument(
     'datasets', metavar='NAME', type=str, nargs='+',
     choices=['lsun', 'mnist'],
-    help='name of dataset to download [celebA, lsun, mnist]'
+    help='name of dataset to download [lsun, mnist]'
 )
 
 
@@ -139,7 +142,7 @@ def maybe_download_mnist(dataset_dirpath, dataset_dirname, set_name):
             _download_gz_dataset(url, dataset_dirpath, dataset_dirname)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     args = parser.parse_args()
 
     if 'lsun' in args.datasets:

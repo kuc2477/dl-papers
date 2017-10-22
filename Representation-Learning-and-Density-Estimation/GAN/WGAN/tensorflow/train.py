@@ -5,13 +5,24 @@ import utils
 from data import DATASETS, DATASET_LENGTH_GETTERS
 
 
-def _sample_z(cfg):
+def _sample_z(sample_size, z_size):
     return np.random.uniform(
-        -1., 1., size=[cfg.batch_size, cfg.z_size]
+        -1., 1., size=[sample_size, z_size]
     ).astype(np.float32)
 
 
-def train(model, config, sess=None):
+def train(model, config, session=None):
+    # define a session if needed.
+    session = session or tf.Session()
+
+    # define summaries.
+    summary_writer = tf.summary.FileWriter(config.log_dir, session.graph)
+    image_summary = tf.summary.image('generated images', model.G)
+    loss_summaries = tf.summary.merge([
+        tf.summary.scalar('wasserstein distance', -model.c_loss),
+        tf.summary.scalar('generator loss', model.g_loss),
+    ])
+
     # define optimizers and a model saver.
     C_traner = tf.train.AdamOptimizer(
         learning_rate=config.learning_rate,
@@ -33,12 +44,12 @@ def train(model, config, sess=None):
     ]
 
     # main training session context
-    with sess or tf.Session() as sess:
+    with session:
         if config.resume:
-            epoch_start = utils.load_checkpoint(sess, model, config) + 1
+            epoch_start = utils.load_checkpoint(session, model, config) + 1
         else:
             epoch_start = 1
-            sess.run(tf.global_variables_initializer())
+            session.run(tf.global_variables_initializer())
 
         for epoch in range(epoch_start, config.epochs+1):
             dataset = DATASETS[config.dataset](config.batch_size)
@@ -46,6 +57,9 @@ def train(model, config, sess=None):
             dataset_stream = tqdm(enumerate(dataset, 1))
 
             for batch_index, xs in dataset_stream:
+                # where are we?
+                iteration = (epoch-1)*dataset_length + batch_index
+
                 # place more weight on ciritic in the begining of the training.
                 critic_update_ratio = (
                     30 if (batch_index < 25 or batch_index % 500 == 0) else
@@ -55,18 +69,18 @@ def train(model, config, sess=None):
                 # train the critic against the current generator and the data.
                 for _ in range(critic_update_ratio):
                     zs = _sample_z(config)
-                    _, c_loss = sess.run(
+                    _, c_loss = session.run(
                         [update_C, model.c_loss],
                         feed_dict={
                             model.z_in: zs,
                             model.image_in: xs
                         }
                     )
-                    sess.run(clip_C)
+                    session.run(clip_C)
 
                 # train the generator against the current critic.
                 zs = _sample_z(config)
-                _, g_loss = sess.run(
+                _, g_loss = session.run(
                     [update_G, model.g_loss],
                     feed_dict={model.z_in: zs}
                 )
@@ -75,8 +89,8 @@ def train(model, config, sess=None):
                 dataset_stream.set_description((
                     'epoch: {epoch}/{epochs} | '
                     'progress: [{trained}/{total}] ({progress:.0f}%) | '
-                    'g loss: {g_loss:.4f} | '
-                    'w distance: {w_dist:.4f}'
+                    'g loss: {g_loss:.3f} | '
+                    'w distance: {w_dist:.3f}'
                 ).format(
                     epoch=epoch,
                     epochs=config.epochs,
@@ -92,10 +106,24 @@ def train(model, config, sess=None):
                     w_dist=-c_loss,
                 ))
 
-                # test the samples
-                if batch_index % config.log_for_every == 0:
-                    name = 'epoch{}-fig{}'.format(epoch, batch_index)
-                    utils.test_samples(sess, model, name, config)
+                # log the generated samples
+                if iteration % config.image_log_interval == 0:
+                    zs = _sample_z(config.sample_size, model.z_size)
+                    summary_writer.add_summary(session.run(
+                        image_summary, feed_dict={
+                            model.z_in: zs
+                        }
+                    ), iteration)
+
+                # log the losses
+                if iteration % config.loss_log_interval == 0:
+                    zs = _sample_z(config.batch_size, model.z_size)
+                    summary_writer.add_summary(session.run(
+                        loss_summaries, feed_dict={
+                            model.z_in: zs,
+                            model.image_in: xs
+                        }
+                    ), iteration)
 
             # save the model at the every end of the epochs.
-            utils.save_checkpoint(sess, model, epoch, config)
+            utils.save_checkpoint(session, model, epoch, config)
