@@ -31,7 +31,7 @@
 
 
 ### VAE
-- *Auto-Encoding Variational Bayes* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114) [[**PyTorch**]](./Representation-Learning-and-Density-Estimation/VAE/VAE/pytorch)
+- *Auto-Encoding Variational Bayes* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114) [[**PyTorch**]](https://github.com/kuc2477/pytorch-vae)
 
 
 ## Memory
