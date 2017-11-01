@@ -41,7 +41,7 @@
 
 ## Continual Learning
 - *Overcoming catastrophic forgetting in neural networks* [[arxiv, 16.12]](https://arxiv.org/abs/1612.00796) [[**PyTorch**]](https://github.com/kuc2477/pytorch-ewc)
-- *Continual Learning with Deep Generative Replay* [[arxiv, 17.05]](https://arxiv.org/abs/1705.08690)
+- *Continual Learning with Deep Generative Replay* [[arxiv, 17.05]](https://arxiv.org/abs/1705.08690) [[**PyTorch**]](https://github.com/kuc2477/pytorch-deep-generative-replay)
 
 
 ## Attention
