@@ -54,6 +54,7 @@
 
 
 ## Learning Invariance
+- *Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition* [[arxiv, 14.06]](https://arxiv.org/abs/1406.4729)
 - *Spatial Transformer Networks* [[arxiv, 15.06]](http://arxiv.org/abs/1506.02025)
 - *Deformable Convolutional Networks* [[arxiv, 17.03]](https://arxiv.org/abs/1703.06211)
 
@@ -73,6 +74,14 @@
 
 
 ## Applications
+
+### Object Detection
+- *Rich feature hierarchies for accurate object detection and semantic segmentation* [[arxiv, 13.11]](https://arxiv.org/abs/1311.2524)
+- *Fast R-CNN* [[arxiv, 15.04]](https://arxiv.org/abs/1504.08083)
+- *Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks* [[arxiv, 15.06]](https://arxiv.org/abs/1506.01497)
+- *You Only Look Once: Unified, Real-Time Object Detection* [[arxiv, 15.06]](https://arxiv.org/abs/1506.02640)
+- *YOLO9000: Better, Faster, Stronger* [[arxiv, 16.12]](https://arxiv.org/abs/1612.08242)
+- *Fast YOLO: A Fast You Only Look Once System for Real-time Embedded Object Detection in Video* [[arxiv, 17.09]](https://arxiv.org/abs/1709.05943)
 
 ### Semantic Segmentation
 - *Learning Deconvolution Network for Semantic Segmentation*  [[arxiv, 15.05]](https://arxiv.org/abs/1505.04366)
