@@ -13,7 +13,7 @@
 - Wide Residual Networks [[arxiv, 16.05]](https://arxiv.org/abs/1605.07146) [[**PyTorch**]](https://github.com/kuc2477/pytorch-wrn)
 
 
-## Representation Learning & Density Estimation
+## Probability Density Estimation
 
 ### RNN
 - *Generating Sequences With Recurrent Neural Networks* [[arxiv, 13.08]](http://arxiv.org/abs/1308.0850)
@@ -34,10 +34,15 @@
 - *Auto-Encoding Variational Bayes* [[arxiv, 13.12]](http://arxiv.org/abs/1312.6114) [[**PyTorch**]](https://github.com/kuc2477/pytorch-vae)
 
 
+## Representation Learning
+- *The Consciousness Prior* [[arxiv, 17.09]](https://arxiv.org/abs/1709.08568)
+
+
 ## Memory
 - *Neural Turing Machines* [[arxiv, 14.10]](http://arxiv.org/abs/1410.5401) [[**PyTorch**]](https://github.com/kuc2477/pytorch-ntm)
 - *Memory Networks* [[arxiv, 14.10]](https://arxiv.org/abs/1410.3916)
 - *End-To-End Memory Networks* [[arxiv, 15.03]](https://arxiv.org/abs/1503.08895) [[**PyTorch**]](https://github.com/kuc2477/pytorch-memn2n)
+- *Hybrid computing using a neural network with dynamic external memory* [[Nature, 16.10]](https://www.nature.com/articles/nature20101.epdf?author_access_token=ImTXBI8aWbYxYQ51Plys8NRgN0jAjWel9jnR3ZoTv0MggmpDmwljGswxVdeocYSurJ3hxupzWuRNeGvvXnoO8o4jTJcnAyhGuZzXJ1GEaD-Z7E6X_a9R-xqJ9TfJWBqz)
 
 ## Continual Learning
 - *Overcoming catastrophic forgetting in neural networks* [[arxiv, 16.12]](https://arxiv.org/abs/1612.00796) [[**PyTorch**]](https://github.com/kuc2477/pytorch-ewc)
@@ -89,3 +94,4 @@
 
 ### Visual QA
 - *TGIF-QA: Toward Spatio-Temporal Reasoning in Visual Question Answering* [[arxiv, 17.04]](https://arxiv.org/abs/1704.04497)
+- *A Read-Write Memory Network for Movie Story Understanding* [[arxiv, 17.09]](https://arxiv.org/abs/1709.09345)
