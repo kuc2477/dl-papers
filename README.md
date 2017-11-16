@@ -85,6 +85,7 @@
 - *Fast R-CNN* [[arxiv, 15.04]](https://arxiv.org/abs/1504.08083)
 - *Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks* [[arxiv, 15.06]](https://arxiv.org/abs/1506.01497)
 - *You Only Look Once: Unified, Real-Time Object Detection* [[arxiv, 15.06]](https://arxiv.org/abs/1506.02640)
+- *SSD: Single Shot MultiBox Detector* [[arxiv, 15.12]](https://arxiv.org/abs/1512.02325)
 - *YOLO9000: Better, Faster, Stronger* [[arxiv, 16.12]](https://arxiv.org/abs/1612.08242)
 - *Fast YOLO: A Fast You Only Look Once System for Real-time Embedded Object Detection in Video* [[arxiv, 17.09]](https://arxiv.org/abs/1709.05943)
 
