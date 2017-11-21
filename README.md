@@ -13,18 +13,23 @@
 - Wide Residual Networks [[arxiv, 16.05]](https://arxiv.org/abs/1605.07146) [[**PyTorch**]](https://github.com/kuc2477/pytorch-wrn)
 
 
-## Probability Density Estimation
+## Distribution Learning
 
 ### RNN
 - *Generating Sequences With Recurrent Neural Networks* [[arxiv, 13.08]](http://arxiv.org/abs/1308.0850)
 
 ### GAN
 - *Generative Adversarial Networks* [[arxiv, 14.06]](http://arxiv.org/abs/1406.2661)
+- *Conditional Generative Adversarial Nets* [[arxiv, 14.11]](https://arxiv.org/abs/1411.1784)
+- *Deep Generative Image Models using a Laplacian Pyramid of Adversarial Networks* [[arxiv, 15.06]](https://arxiv.org/abs/1506.05751)
 - *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks* [[arxiv, 15.11]](http://arxiv.org/abs/1511.06434) [[**TensorFlow**]](https://github.com/kuc2477/tensorflow-dcgan)
 - *InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets* [[arxiv. 16.06]](https://arxiv.org/abs/1606.03657) [[**TensorFlow**]](https://github.com/kuc2477/tensorflow-infogan)
 - *Energy-based Generative Adversarial Network* [[arxiv, 16.09]](https://arxiv.org/abs/1609.03126)
+- *Image-to-Image Translation with Conditional Adversarial Networks* [[arxiv, 16.11]](https://arxiv.org/abs/1611.07004)
+- *StackGAN: Text to Photo-realistic Image Synthesis with Stacked Generative Adversarial Networks* [[arxiv, 16.12]](http://openaccess.thecvf.com/content_ICCV_2017/papers/Zhang_StackGAN_Text_to_ICCV_2017_paper.pdf)
 - *Wasserstein GAN* [[arxiv, 17.01]](http://arxiv.org/abs/1701.07875) [[**TensorFlow**]](https://github.com/kuc2477/tensorflow-wgan)
 - *Boundary-Seeking Generative Adversarial Networks*  [[arxiv, 17.02]](http://arxiv.org/abs/1702.08431)
+- *Triple Generative Adversarial Nets* [[arxiv, 17.03]](https://arxiv.org/abs/1703.02291)
 - *Learning to Discover Cross-Domain Relations with Generative Adversarial Networks*  [[arxiv, 17.03]](http://arxiv.org/abs/1703.05192)
 - *BEGAN: Boundary Equilibrium Generative Adversarial Networks* [[arxiv, 17.03]](https://arxiv.org/abs/1703.10717)
 - *Improved Training of Wasserstein GANs* [[arxiv, 17.04]](https://arxiv.org/abs/1704.00028) [[**PyTorch**]](https://github.com/kuc2477/pytorch-wgan-gp)
