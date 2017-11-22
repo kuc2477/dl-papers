@@ -33,6 +33,7 @@
 - *Learning to Discover Cross-Domain Relations with Generative Adversarial Networks*  [[arxiv, 17.03]](http://arxiv.org/abs/1703.05192)
 - *BEGAN: Boundary Equilibrium Generative Adversarial Networks* [[arxiv, 17.03]](https://arxiv.org/abs/1703.10717)
 - *Improved Training of Wasserstein GANs* [[arxiv, 17.04]](https://arxiv.org/abs/1704.00028) [[**PyTorch**]](https://github.com/kuc2477/pytorch-wgan-gp)
+- *Global versus Localized Generative Adversarial Nets* [[arxiv, 17.11]](https://arxiv.org/abs/1711.06020)
 
 
 ### VAE
