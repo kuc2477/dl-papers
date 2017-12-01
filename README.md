@@ -9,8 +9,9 @@
 
 ### CNN
 - *Striving for Simplicity: The All Convolutional Net* [[arxiv, 14.12]](http://arxiv.org/abs/1412.6806)
-- Deep Residual Learning for Image Recognition [[arxiv, 15.12]](https://arxiv.org/abs/1512.03385)
-- Wide Residual Networks [[arxiv, 16.05]](https://arxiv.org/abs/1605.07146) [[**PyTorch**]](https://github.com/kuc2477/pytorch-wrn)
+- *U-Net: Convolutional Networks for Biomedical Image Segmentation* [[arxiv, 15.05]](https://arxiv.org/abs/1505.04597)
+- *Deep Residual Learning for Image Recognition* [[arxiv, 15.12]](https://arxiv.org/abs/1512.03385)
+- *Wide Residual Networks* [[arxiv, 16.05]](https://arxiv.org/abs/1605.07146) [[**PyTorch**]](https://github.com/kuc2477/pytorch-wrn)
 
 
 ## Distribution Learning
@@ -24,6 +25,8 @@
 - *Deep Generative Image Models using a Laplacian Pyramid of Adversarial Networks* [[arxiv, 15.06]](https://arxiv.org/abs/1506.05751)
 - *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks* [[arxiv, 15.11]](http://arxiv.org/abs/1511.06434) [[**TensorFlow**]](https://github.com/kuc2477/tensorflow-dcgan)
 - *InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets* [[arxiv. 16.06]](https://arxiv.org/abs/1606.03657) [[**TensorFlow**]](https://github.com/kuc2477/tensorflow-infogan)
+- *Generative Adversarial Text to Image Synthesis* [[arxiv, 16.05]](https://arxiv.org/abs/1605.05396)
+- *Adversarilly Learned Inference* [[arxiv, 1606]](https://arxiv.org/abs/1606.00704)
 - *Energy-based Generative Adversarial Network* [[arxiv, 16.09]](https://arxiv.org/abs/1609.03126)
 - *Image-to-Image Translation with Conditional Adversarial Networks* [[arxiv, 16.11]](https://arxiv.org/abs/1611.07004)
 - *StackGAN: Text to Photo-realistic Image Synthesis with Stacked Generative Adversarial Networks* [[arxiv, 16.12]](http://openaccess.thecvf.com/content_ICCV_2017/papers/Zhang_StackGAN_Text_to_ICCV_2017_paper.pdf)
@@ -62,6 +65,10 @@
 
 ## Relational Reasoning
 - *A simple neural network module for relational reasoning* [[arxiv, 17.06]](https://arxiv.org/abs/1706.01427)
+
+
+## Learning Equivariance
+- *Dynamic Routing Between Capsules* [[arxiv, 17.10]](https://arxiv.org/abs/1710.09829)
 
 
 ## Learning Invariance
