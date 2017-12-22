@@ -37,6 +37,7 @@
 - *StackGAN: Text to Photo-realistic Image Synthesis with Stacked Generative Adversarial Networks* [[arxiv, 16.12]](http://openaccess.thecvf.com/content_ICCV_2017/papers/Zhang_StackGAN_Text_to_ICCV_2017_paper.pdf)
 - *StackGAN++: Realistic Image Synthesis with Stacked Generative Adversarial Networks* [[arxiv, 17.10]](https://arxiv.org/abs/1710.10916)
 - *Progressive Growing of GANs for Improved Quality, Stability, and Variation* [[arxiv, 17.10]](https://arxiv.org/abs/1710.10196)
+- *High-Resolution Image Synthesis and Semantic Manipulation with Conditional GANs* [[arxiv, 17.11]](https://arxiv.org/abs/1711.11585)
 
 #### Learning Conditional Distributions
 - *Conditional Generative Adversarial Nets* [[arxiv, 14.11]](https://arxiv.org/abs/1411.1784)
@@ -46,6 +47,7 @@
 - *Learning What and Where to Draw* [[arxiv, 16.10]](https://arxiv.org/abs/1610.02454)
 - *Image-to-Image Translation with Conditional Adversarial Networks* [[arxiv, 16.11]](https://arxiv.org/abs/1611.07004)
 - *Triple Generative Adversarial Nets* [[arxiv, 17.03]](https://arxiv.org/abs/1703.02291)
+- *Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks* [[arxiv, 17.03]](https://arxiv.org/abs/1703.10593)
 - *Learning to Discover Cross-Domain Relations with Generative Adversarial Networks*  [[arxiv, 17.03]](http://arxiv.org/abs/1703.05192)
 
 #### Avoiding Mode Collapse to Learn Full Manifolds
